@@ -1,2 +1,2 @@
-# pasenet
+# PasENet
 Pascal port of ENet with IPv6 support
