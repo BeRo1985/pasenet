@@ -2995,7 +2995,7 @@ procedure enet_peer_reset(peer:PENetPeer);
 begin
  enet_peer_on_disconnect(peer);
  peer^.outgoingPeerID:=ENET_PROTOCOL_MAXIMUM_PEER_ID;
- peer^.connectID:=0;
+ peer^.connectID:=0; 
  peer^.state:=ENET_PEER_STATE_DISCONNECTED;
  peer^.incomingBandwidth:=0;
  peer^.outgoingBandwidth:=0;
@@ -4794,7 +4794,7 @@ begin
   exit;
  end;
  header:=PENetProtocolHeader(host^.receivedData);
- peerID:=ENET_NET_TO_HOST_16 (header^.peerID);
+ peerID:=ENET_NET_TO_HOST_16(header^.peerID);
  sessionID:=(peerID and ENET_PROTOCOL_HEADER_SESSION_MASK) shr ENET_PROTOCOL_HEADER_SESSION_SHIFT;
  flags:=peerID and ENET_PROTOCOL_HEADER_FLAG_MASK;
  peerID:=peerID and not (ENET_PROTOCOL_HEADER_FLAG_MASK or ENET_PROTOCOL_HEADER_SESSION_MASK);
@@ -5464,7 +5464,7 @@ begin
    end;
    -1:begin
 {$ifdef ENET_DEBUG}
-    perror('Error dispatching incoming packets');
+    writeln(ERROR,'Error dispatching incoming packets');
 {$endif}
     result:=-1;
     exit;
@@ -5484,7 +5484,7 @@ begin
    end;
    -1:begin
 {$ifdef ENET_DEBUG}
-    perror('Error sending outgoing packets');
+    writeln(ERROR,'Error sending outgoing packets');
 {$endif}
     result:=-1;
     exit;
@@ -5498,7 +5498,7 @@ begin
     end;
     -1:begin
 {$ifdef ENET_DEBUG}
-     perror('Error receiving incoming packets');
+     writeln(ERROR,'Error receiving incoming packets');
 {$endif}
      result:=-1;
      exit;
@@ -5513,7 +5513,7 @@ begin
     end;
     -1:begin
 {$ifdef ENET_DEBUG}
-     perror('Error receiving incoming packets');
+     writeln(ERROR,'Error receiving incoming packets');
 {$endif}
      result:=-1;
      exit;
@@ -5527,7 +5527,7 @@ begin
    end;
    -1:begin
 {$ifdef ENET_DEBUG}
-    perror('Error sending outgoing packets');
+    writeln(ERROR,'Error sending outgoing packets');
 {$endif}
     result:=-1;
     exit;
@@ -5541,7 +5541,7 @@ begin
     end;
     -1:begin
 {$ifdef ENET_DEBUG}
-     perror('Error dispatching incoming packets');
+     writeln(ERROR,'Error dispatching incoming packets');
 {$endif}
      result:=-1;
      exit;

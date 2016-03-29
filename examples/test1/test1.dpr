@@ -18,8 +18,11 @@ begin
    if assigned(server) then begin
     try
      client:=nil;
-     while enet_host_service(server,@event,10000)>0 do begin
+     while enet_host_service(server,@event,10000)>=0 do begin
       case event.type_ of
+       ENET_EVENT_TYPE_NONE:begin
+        writeln('Nothing');
+       end;
        ENET_EVENT_TYPE_CONNECT:begin
         writeln('A new client connected');
        end;
