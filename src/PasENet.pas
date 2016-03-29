@@ -5060,8 +5060,8 @@ begin
   inc(command);
   inc(buffer);
  end;
- host^.commandCount:=(ptruint(pointer(@command))-ptruint(pointer(@host^.commands))) div SizeOf(TENetProtocol);
- host^.bufferCount:=(ptruint(pointer(@buffer))-ptruint(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
+ host^.commandCount:=(ptruint(pointer(command))-ptruint(pointer(@host^.commands))) div SizeOf(TENetProtocol);
+ host^.bufferCount:=(ptruint(pointer(buffer))-ptruint(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
 end;
 
 procedure enet_protocol_send_unreliable_outgoing_commands(host:PENetHost;peer:PENetPeer);
@@ -5129,8 +5129,8 @@ begin
   inc(command);
   inc(buffer);
  end;
- host^.commandCount:=(ptruint(pointer(@command))-ptruint(pointer(@host^.commands))) div SizeOf(TENetProtocol);
- host^.bufferCount:=(ptruint(pointer(@buffer))-ptruint(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
+ host^.commandCount:=(ptruint(pointer(command))-ptruint(pointer(@host^.commands))) div SizeOf(TENetProtocol);
+ host^.bufferCount:=(ptruint(pointer(buffer))-ptruint(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
  if (peer^.state=ENET_PEER_STATE_DISCONNECT_LATER) and
     enet_list_empty(@peer^.outgoingReliableCommands) and
     enet_list_empty(@peer^.outgoingUnreliableCommands) and
@@ -5266,8 +5266,8 @@ begin
   inc(command);
   inc(buffer);
  end;
- host^.commandCount:=(ptruint(pointer(@command))-ptruint(pointer(@host^.commands))) div SizeOf(TENetProtocol);
- host^.bufferCount:=(ptruint(pointer(@buffer))-ptruint(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
+ host^.commandCount:=(ptruint(pointer(command))-ptruint(pointer(@host^.commands))) div SizeOf(TENetProtocol);
+ host^.bufferCount:=(ptruint(pointer(buffer))-ptruint(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
  result:=canPing;
 end;
 
