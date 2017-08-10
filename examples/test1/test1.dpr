@@ -27,11 +27,7 @@ var address:TENetAddress;
     event:TENetEvent;
     packet:PENetPacket;
 begin
- if ParamCount>0 then begin
-  address.host:=ENET_HOST_ANY;
- end else begin
-  enet_address_set_host(@address,PAnsiChar('127.0.0.1'));
- end;
+ address.host:=ENET_HOST_ANY;
  address.port:=64242;
  server:=enet_host_create(@address,32,2,0,0);
  if assigned(server) then begin
@@ -65,7 +61,7 @@ end;
 
 procedure TClient.Execute;
 var address:TENetAddress;
-    server,client:PENetHost;
+    client:PENetHost;
     event:TENetEvent;
     peer:PENetPeer;
     Disconnected:boolean;
@@ -76,7 +72,7 @@ begin
    if ParamCount>1 then begin
     enet_address_set_host(@address,PAnsiChar(AnsiString(ParamStr(2))));
    end else begin
-    enet_address_set_host(@address,PAnsiChar('127.0.0.1'));
+    enet_address_set_host(@address,PAnsiChar('localhost'));
    end;
    address.port:=64242;
    peer:=enet_host_connect(client,@address,2,0);
