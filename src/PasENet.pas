@@ -1,7 +1,7 @@
 (*
 **
-** Copyright (c) 2002-2016 Lee Salzman
-** Copyright (c) 2013-2016 Benjamin 'BeRo' Rosseaux (Pascal port and IPv6)
+** Copyright (c) 2002-2017 Lee Salzman
+** Copyright (c) 2013-2017 Benjamin 'BeRo' Rosseaux (Pascal port and IPv6)
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a
 ** copy of this software and associated documentation files (the "Software"),
@@ -25,34 +25,294 @@
 unit PasENet;
 {$ifdef fpc}
  {$mode delphi}
+ {$ifdef cpui386}
+  {$define cpu386}
+ {$endif}
+ {$ifdef cpu386}
+  {$asmmode intel}
+ {$endif}
+ {$ifdef cpuamd64}
+  {$asmmode intel}
+ {$endif}
+ {$ifdef FPC_LITTLE_ENDIAN}
+  {$define LITTLE_ENDIAN}
+ {$else}
+  {$ifdef FPC_BIG_ENDIAN}
+   {$define BIG_ENDIAN}
+  {$endif}
+ {$endif}
+ {$define CAN_INLINE}
+ {$define HAS_ADVANCED_RECORDS}
 {$else}
- {$IFDEF CONDITIONALEXPRESSIONS}
-  {$IF CompilerVersion >= 23.0}
-   {$WARN IMPLICIT_STRING_CAST_LOSS OFF}
-   {$WARN IMPLICIT_STRING_CAST OFF}
-   {$WARN SUSPICIOUS_TYPECAST OFF}
+ {$realcompatibility off}
+ {$localsymbols on}
+ {$ifndef cpu64}
+  {$define cpu32}
+ {$endif}
+ {$undef CAN_INLINE}
+ {$undef HAS_ADVANCED_RECORDS}
+ {$define LITTLE_ENDIAN}
+ {$ifndef BCB}
+  {$ifdef ver120}
+   {$define Delphi4or5}
+  {$endif}
+  {$ifdef ver130}
+   {$define Delphi4or5}
+  {$endif}
+  {$ifdef ver140}
+   {$define Delphi6}
+  {$endif}
+  {$ifdef ver150}
+   {$define Delphi7}
+  {$endif}
+  {$ifdef ver170}
+   {$define Delphi2005}
+  {$endif}
+ {$else}
+  {$ifdef ver120}
+   {$define Delphi4or5}
+   {$define BCB4}
+  {$endif}
+  {$ifdef ver130}
+   {$define Delphi4or5}
+  {$endif}
+ {$endif}
+{$ifdef conditionalexpressions}
+  {$if CompilerVersion>=24.0}
+   {$legacyifend on}       
+  {$ifend}
+  {$if CompilerVersion>=14.0}
+   {$if CompilerVersion=14.0}
+    {$define Delphi6}
+   {$ifend}
+   {$define Delphi6AndUp}
+  {$ifend}
+  {$if CompilerVersion>=15.0}
+   {$if CompilerVersion=15.0}
+    {$define Delphi7}
+   {$ifend}
+   {$define Delphi7AndUp}
+  {$ifend}
+  {$if CompilerVersion>=17.0}
+   {$if CompilerVersion=17.0}
+    {$define Delphi2005}
+   {$ifend}
+   {$define Delphi2005AndUp}
+  {$ifend}
+  {$if CompilerVersion>=18.0}
+   {$if CompilerVersion=18.0}
+    {$define BDS2006}
+    {$define Delphi2006}
+   {$ifend}
+   {$define Delphi2006AndUp}
+   {$define CAN_INLINE}
+   {$define HAS_ADVANCED_RECORDS}
+  {$ifend}
+  {$if CompilerVersion>=18.5}
+   {$if CompilerVersion=18.5}
+    {$define Delphi2007}
+   {$ifend}
+   {$define Delphi2007AndUp}
+  {$ifend}
+  {$if CompilerVersion=19.0}
+   {$define Delphi2007Net}
+  {$ifend}
+  {$if CompilerVersion>=20.0}
+   {$if CompilerVersion=20.0}
+    {$define Delphi2009}
+   {$ifend}
+   {$define Delphi2009AndUp}
+  {$ifend}
+  {$if CompilerVersion>=21.0}
+   {$if CompilerVersion=21.0}
+    {$define Delphi2010}
+   {$ifend}
+   {$define Delphi2010AndUp}
+  {$ifend}
+  {$if CompilerVersion>=22.0}
+   {$if CompilerVersion=22.0}
+    {$define DelphiXE}
+   {$ifend}
+   {$define DelphiXEAndUp}
+  {$ifend}
+  {$if CompilerVersion>=23.0}
+   {$if CompilerVersion=23.0}
+    {$define DelphiXE2}
+   {$ifend}
+   {$define DelphiXE2AndUp}
+  {$ifend}
+  {$if CompilerVersion>=24.0}
+   {$legacyifend on}
+   {$if CompilerVersion=24.0}
+    {$define DelphiXE3}
+   {$ifend}
+   {$define DelphiXE3AndUp}
+  {$ifend}
+  {$if CompilerVersion>=25.0}
+   {$if CompilerVersion=25.0}
+    {$define DelphiXE4}
+   {$ifend}
+   {$define DelphiXE4AndUp}
+  {$ifend}
+  {$if CompilerVersion>=26.0}
+   {$if CompilerVersion=26.0}
+    {$define DelphiXE5}
+   {$ifend}
+   {$define DelphiXE5AndUp}
+  {$ifend}
+  {$if CompilerVersion>=27.0}
+   {$if CompilerVersion=27.0}
+    {$define DelphiXE6}
+   {$ifend}
+   {$define DelphiXE6AndUp}
+  {$ifend}
+  {$if CompilerVersion>=28.0}
+   {$if CompilerVersion=28.0}
+    {$define DelphiXE7}
+   {$ifend}
+   {$define DelphiXE7AndUp}
+  {$ifend}
+  {$if CompilerVersion>=29.0}
+   {$if CompilerVersion=29.0}
+    {$define DelphiXE8}
+   {$ifend}
+   {$define DelphiXE8AndUp}
+  {$ifend}
+  {$if CompilerVersion>=30.0}
+   {$if CompilerVersion=30.0}
+    {$define Delphi10Seattle}
+   {$ifend}
+   {$define Delphi10SeattleAndUp}
+  {$ifend}
+  {$if CompilerVersion>=31.0}
+   {$if CompilerVersion=31.0}
+    {$define Delphi10Berlin}
+   {$ifend}
+   {$define Delphi10BerlinAndUp}
   {$ifend}
  {$endif}
+ {$ifndef Delphi4or5}
+  {$ifndef BCB}
+   {$define Delphi6AndUp}
+  {$endif}
+   {$ifndef Delphi6}
+    {$define BCB6OrDelphi7AndUp}
+    {$ifndef BCB}
+     {$define Delphi7AndUp}
+    {$endif}
+    {$ifndef BCB}
+     {$ifndef Delphi7}
+      {$ifndef Delphi2005}
+       {$define BDS2006AndUp}
+      {$endif}
+     {$endif}
+    {$endif}
+   {$endif}
+ {$endif}
+ {$ifdef Delphi6AndUp}
+  {$warn symbol_platform off}
+  {$warn symbol_deprecated off}
+ {$endif}
+ {$ifdef DelphiXE2AndUp}
+  {$warn implicit_string_cast_loss off}
+  {$warn implicit_string_cast off}
+  {$warn suspicious_typecast off}
+ {$endif}
 {$endif}
-{$j+}
+{$if defined(Win32) or defined(Win64)}
+ {$define Windows}
+{$ifend}
+{$rangechecks off}
+{$extendedsyntax on}
+{$writeableconst on}
+{$hints off}
+{$booleval off}
+{$typedaddress off}
+{$stackframes off}
+{$varstringchecks on}
+{$typeinfo on}
+{$overflowchecks off}
+{$longstrings on}
+{$openstrings on}
 
 interface
 
-uses {$ifdef unix}BaseUnix,Unix,UnixType,Sockets,cnetdb,termio,{$else}Windows,PasENetWinSock2,MMSystem,{$endif}SysUtils,Classes,Math;
+uses {$ifdef Unix}
+      // Unix, Linux, Android, Darwin (MacOS, iOS)
+      BaseUnix,
+      Unix,
+      UnixType,
+      Sockets,
+      cnetdb,
+      termio,
+     {$else}
+      // Win32, Win64
+      Windows,
+      PasENetWinSock2,
+      MMSystem,
+     {$endif}
+     SysUtils,
+     Classes,
+     Math;
 
-type TENETRawByteString={$if declared(RawByteString)}RawByteString{$else}AnsiString{$ifend};
+type PPENETInt8=^PENETInt8;
+     PENETInt8=^TENETInt8;
+     TENETInt8={$ifdef fpc}Int8{$else}shortint{$endif};
 
+     PPENETUInt8=^PENETUInt8;
+     PENETUInt8=^TENETUInt8;
+     TENETUInt8={$ifdef fpc}UInt8{$else}byte{$endif};
+
+     PPENETInt16=^PENETInt16;
+     PENETInt16=^TENETInt16;
+     TENETInt16={$ifdef fpc}Int16{$else}smallint{$endif};
+
+     PPENETUInt16=^PENETUInt16;
+     PENETUInt16=^TENETUInt16;
+     TENETUInt16={$ifdef fpc}UInt16{$else}word{$endif};
+
+     PPENETInt32=^PENETInt32;
+     PENETInt32=^TENETInt32;
+     TENETInt32={$ifdef fpc}Int32{$else}longint{$endif};
+
+     PPENETUInt32=^PENETUInt32;
+     PENETUInt32=^TENETUInt32;
+     TENETUInt32={$ifdef fpc}UInt32{$else}longword{$endif};
+
+     PPENETInt64=^PENETInt64;
+     PENETInt64=^TENETInt64;
+     TENETInt64=Int64;
+
+     PPENETUInt64=^PENETUInt64;
+     PENETUInt64=^TENETUInt64;
+     TENETUInt64=UInt64;
+
+     PPENETChar=^PChar;
+     PENETChar=PAnsiChar;
+     TENETChar=AnsiChar;
+
+     PPENETRawByteChar=^PChar;
+     PENETRawByteChar=PAnsiChar;
+     TENETRawByteChar=AnsiChar;
+
+     PPENETPointer=^PENETPointer;
+     PENETPointer=^TENETPointer;
+     TENETPointer=Pointer;
+
+     PPENETPtrUInt=^PENETPtrUInt;
+     PPENETPtrInt=^PENETPtrInt;
+     PENETPtrUInt=^TENETPtrUInt;
+     PENETPtrInt=^TENETPtrInt;
 {$ifdef fpc}
+     TENETPtrUInt=PtrUInt;
+     TENETPtrInt=PtrInt;
  {$undef OldDelphi}
-type ENETptruint=ptruint;
-     ENETptrint=ptrint;
 {$else}
  {$ifdef conditionalexpressions}
   {$if CompilerVersion>=23.0}
    {$undef OldDelphi}
-type ENETqword=uint64;
-     ENETptruint=NativeUInt;
-     ENETptrint=NativeInt;
+     TENETPtrUInt=NativeUInt;
+     TENETPtrInt=NativeInt;
   {$else}
    {$define OldDelphi}
   {$ifend}
@@ -61,15 +321,50 @@ type ENETqword=uint64;
  {$endif}
 {$endif}
 {$ifdef OldDelphi}
-type ENETqword=int64;
 {$ifdef cpu64}
-     ENETptruint=qword;
-     ENETptrint=int64;
+     TENETPtrUInt=uint64;
+     TENETPtrInt=int64;
 {$else}
-    ENETptruint=longword;
-    ENETptrint=longint;
+     TENETPtrUInt=longword;
+     TENETPtrInt=longint;
 {$endif}
 {$endif}
+
+     PPENETSizeUInt=^PENETSizeUInt;
+     PENETSizeUInt=^TENETSizeUInt;
+     TENETSizeUInt=TENETPtrUInt;
+
+     PPENETSizeInt=^PENETSizeInt;
+     PENETSizeInt=^TENETSizeInt;
+     TENETSizeInt=TENETPtrInt;
+
+     PPENETNativeUInt=^PENETNativeUInt;
+     PENETNativeUInt=^TENETNativeUInt;
+     TENETNativeUInt=TENETPtrUInt;
+
+     PPENETNativeInt=^PENETNativeInt;
+     PENETNativeInt=^TENETNativeInt;
+     TENETNativeInt=TENETPtrInt;
+
+     PPENETSize=^PENETSizeUInt;
+     PENETSize=^TENETSizeUInt;
+     TENETSize=TENETPtrUInt;
+
+     PPENETPtrDiff=^PENETPtrDiff;
+     PENETPtrDiff=^TENETPtrDiff;
+     TENETPtrDiff=TENETPtrInt;
+
+     PPENETRawByteString=^PENETRawByteString;
+     PENETRawByteString=^TENETRawByteString;
+     TENETRawByteString={$if declared(RawByteString)}RawByteString{$else}AnsiString{$ifend};
+
+     PPENETUTF8String=^PENETUTF8String;
+     PENETUTF8String=^TENETUTF8String;
+     TENETUTF8String={$if declared(UTF8String)}UTF8String{$else}AnsiString{$ifend};
+
+     PPENETUTF16String=^PENETUTF16String;
+     PENETUTF16String=^TENETUTF16String;
+     TENETUTF16String={$if declared(UnicodeString)}UnicodeString{$else}WideString{$ifend};
 
 const ENET_VERSION_MAJOR=1;
       ENET_VERSION_MINOR=3;
@@ -206,7 +501,7 @@ const ENET_VERSION_MAJOR=1;
       ENET_EVENT_TYPE_RECEIVE=3;
 
 type PENetVersion=^TENetVersion;
-     TENetVersion=longword;
+     TENetVersion=TENETUInt32;
 
      PENetSocket=^TENetSocket;
      TENetSocket=TSocket;
@@ -214,15 +509,15 @@ type PENetVersion=^TENetVersion;
      PENetSocketSet=^TENetSocketSet;
      TENetSocketSet=TFDSet;
 
-     PENetProtocolCommand=^TENetProtocolCommand; 
-     TENetProtocolCommand=byte;
+     PENetProtocolCommand=^TENetProtocolCommand;
+     TENetProtocolCommand=TENETUInt8;
 
      PENetProtocolFlag=^TENetProtocolFlag;
-     TENetProtocolFlag=longint;
+     TENetProtocolFlag=TENETInt32;
 
      PENetCallbacks=^TENetCallbacks;
      TENetCallbacks=record
-      malloc:function(Size:longint):pointer;
+      malloc:function(Size:TENETInt32):pointer;
       free:procedure(memory:pointer);
       no_memory:procedure;
      end;
@@ -242,78 +537,78 @@ type PENetVersion=^TENetVersion;
 
      PENetProtocolHeader=^TENetProtocolHeader;
      TENetProtocolHeader=packed record
-      peerID:word;
-      sentTime:word;
+      peerID:TENETUInt16;
+      sentTime:TENETUInt16;
      end;
 
      PENetProtocolCommandHeader=^TENetProtocolCommandHeader;
      TENetProtocolCommandHeader=packed record
-      command:byte;
-      channelID:byte;
-      reliableSequenceNumber:word;
+      command:TENETUInt8;
+      channelID:TENETUInt8;
+      reliableSequenceNumber:TENETUInt16;
      end;
 
      PENetProtocolAcknowledge=^TENetProtocolAcknowledge;
      TENetProtocolAcknowledge=packed record
       header:TENetProtocolCommandHeader;
-      receivedReliableSequenceNumber:word;
-      receivedSentTime:word;
+      receivedReliableSequenceNumber:TENETUInt16;
+      receivedSentTime:TENETUInt16;
      end;
 
      PENetProtocolConnect=^TENetProtocolConnect;
      TENetProtocolConnect=packed record
       header:TENetProtocolCommandHeader;
-      outgoingPeerID:word;
-      incomingSessionID:word;
-      outgoingSessionID:word;
-      mtu:longword;
-      windowSize:longword;
-      channelCount:longword;
-      incomingBandwidth:longword;
-      outgoingBandwidth:longword;
-      packetThrottleInterval:longword;
-      packetThrottleAcceleration:longword;
-      packetThrottleDeceleration:longword;
-      connectID:longword;
-      data:longword;
+      outgoingPeerID:TENETUInt16;
+      incomingSessionID:TENETUInt16;
+      outgoingSessionID:TENETUInt16;
+      mtu:TENETUInt32;
+      windowSize:TENETUInt32;
+      channelCount:TENETUInt32;
+      incomingBandwidth:TENETUInt32;
+      outgoingBandwidth:TENETUInt32;
+      packetThrottleInterval:TENETUInt32;
+      packetThrottleAcceleration:TENETUInt32;
+      packetThrottleDeceleration:TENETUInt32;
+      connectID:TENETUInt32;
+      data:TENETUInt32;
      end;
 
      PENetProtocolVerifyConnect=^TENetProtocolVerifyConnect;
      TENetProtocolVerifyConnect=packed record
       header:TENetProtocolCommandHeader;
-      outgoingPeerID:word;
-      incomingSessionID:word;
-      outgoingSessionID:word;
-      mtu:longword;
-      windowSize:longword;
-      channelCount:longword;
-      incomingBandwidth:longword;
-      outgoingBandwidth:longword;
-      packetThrottleInterval:longword;
-      packetThrottleAcceleration:longword;
-      packetThrottleDeceleration:longword;
-      connectID:longword;
+      outgoingPeerID:TENETUInt16;
+      incomingSessionID:TENETUInt16;
+      outgoingSessionID:TENETUInt16;
+      mtu:TENETUInt32;
+      windowSize:TENETUInt32;
+      channelCount:TENETUInt32;
+      incomingBandwidth:TENETUInt32;
+      outgoingBandwidth:TENETUInt32;
+      packetThrottleInterval:TENETUInt32;
+      packetThrottleAcceleration:TENETUInt32;
+      packetThrottleDeceleration:TENETUInt32;
+      connectID:TENETUInt32;
      end;
 
      PENetProtocolBandwidthLimit=^TENetProtocolBandwidthLimit;
      TENetProtocolBandwidthLimit=packed record
       header:TENetProtocolCommandHeader;
-      incomingBandwidth:longword;
-      outgoingBandwidth:longword;
+      incomingBandwidth:TENETUInt32;
+      outgoingBandwidth:TENETUInt32;
      end;
 
      PENetProtocolThrottleConfigure=^TENetProtocolThrottleConfigure;
      TENetProtocolThrottleConfigure=packed record
       header:TENetProtocolCommandHeader;
-      packetThrottleInterval:longword;
-      packetThrottleAcceleration:longword;
-      packetThrottleDeceleration:longword;
+      packetThrottleInterval:TENETUInt32;
+      packetThrottleAcceleration:TENETUInt32;
+      packetThrottleDeceleration:TENETUInt32;
      end;
 
      PENetProtocolDisconnect=^TENetProtocolDisconnect;
      TENetProtocolDisconnect=packed record
       header:TENetProtocolCommandHeader;
-      data:longword;
+      data:TENETUInt32;
      end;
 
      PENetProtocolPing=^TENetProtocolPing;
@@ -324,32 +619,32 @@ type PENetVersion=^TENetVersion;
      PENetProtocolSendReliable=^TENetProtocolSendReliable;
      TENetProtocolSendReliable=packed record
       header:TENetProtocolCommandHeader;
-      dataLength:word;
+      dataLength:TENETUInt16;
      end;
 
      PENetProtocolSendUnreliable=^TENetProtocolSendUnreliable;
      TENetProtocolSendUnreliable=packed record
       header:TENetProtocolCommandHeader;
-      unreliableSequenceNumber:word;
-      dataLength:word;
+      unreliableSequenceNumber:TENETUInt16;
+      dataLength:TENETUInt16;
      end;
 
      PENetProtocolSendUnsequenced=^TENetProtocolSendUnsequenced;
      TENetProtocolSendUnsequenced=packed record
       header:TENetProtocolCommandHeader;
-      unsequencedGroup:word;
-      dataLength:word;
+      unsequencedGroup:TENETUInt16;
+      dataLength:TENETUInt16;
      end;
 
      PENetProtocolSendFragment=^TENetProtocolSendFragment;
      TENetProtocolSendFragment=packed record
       header:TENetProtocolCommandHeader;
-      startSequenceNumber:word;
-      dataLength:word;
-      fragmentCount:longword;
-      fragmentNumber:longword;
-      totalLength:longword;
-      fragmentOffset:longword;
+      startSequenceNumber:TENETUInt16;
+      dataLength:TENETUInt16;
+      fragmentCount:TENETUInt32;
+      fragmentNumber:TENETUInt32;
+      totalLength:TENETUInt32;
+      fragmentOffset:TENETUInt32;
      end;
 
      PENetProtocol=^TENetProtocol;
@@ -397,53 +692,53 @@ type PENetVersion=^TENetVersion;
      TENetBuffer=record
 {$ifdef unix}
       Data:pansichar;
-      DataLength:longword;
+      DataLength:TENETUInt32;
 {$else}
-      DataLength:longword;
+      DataLength:TENETUInt32;
       Data:pansichar;
 {$endif}
      end;
 
      PENetSocketType=^TENetSocketType;
-     TENetSocketType=byte;
+     TENetSocketType=TENETUInt8;
 
      PENetSocketWait=^TENetSocketWait;
-     TENetSocketWait=byte;
+     TENetSocketWait=TENETUInt8;
 
      PENetSocketOption=^TENetSocketOption;
-     TENetSocketOption=byte;
+     TENetSocketOption=TENETUInt8;
 
      PENetSocketShutdown=^TENetSocketShutdown;
-     TENetSocketShutdown=byte;
+     TENetSocketShutdown=TENETUInt8;
 
      PENetHostAddress=^TENetHostAddress;
      TENetHostAddress=packed record
-      case byte of
+      case TENETUInt8 of
        0:(
-        addr:packed array[0..15] of byte;
+        addr:packed array[0..15] of TENETUInt8;
        );
        1:(
-        addr16:packed array[0..7] of word;
+        addr16:packed array[0..7] of TENETUInt16;
        );
        2:(
-        addr32:packed array[0..3] of longword;
+        addr32:packed array[0..3] of TENETUInt32;
        );
        3:(
-        addr64:packed array[0..1] of int64;
+        addr64:packed array[0..1] of TENETInt64;
        );
      end;
 
      PENetAddressFamily=^TENetAddressFamily;
-     TENetAddressFamily=byte;
+     TENetAddressFamily=TENETUInt8;
 
      PENetPacketFlag=^TENetPacketFlag;
-     TENetPacketFlag=byte;
+     TENetPacketFlag=TENETUInt8;
 
      PENetAddress=^TENetAddress;
      TENetAddress=record
       host:TENetHostAddress;
-      scopeID:{$ifdef unix}longword{$else}int64{$endif};
-      port:word;
+      scopeID:{$ifdef unix}TENETUInt32{$else}TENETInt64{$endif};
+      port:TENETUInt16;
      end;
 
 const ENET_HOST_ANY_INIT:TENetHostAddress=(addr:(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0));
@@ -456,15 +751,15 @@ const ENET_HOST_ANY_INIT:TENetHostAddress=(addr:(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 type PENetPacket=^TENetPacket;
 
      PLongwords=^TLongwords;
-     TLongwords=array[0..0] of longword;
+     TLongwords=array[0..0] of TENETUInt32;
 
      TENetPacketFreeCallback=procedure(packet:PENetPacket);
 
      TENetPacket=record
-      referenceCount:longword;
-      flags:longword;
+      referenceCount:TENETUInt32;
+      flags:TENETUInt32;
       data:PAnsiChar;
-      dataLength:longword;
+      dataLength:TENETUInt32;
       freeCallback:TENetPacketFreeCallback;
       userData:pointer;
      end;
@@ -472,21 +767,21 @@ type PENetPacket=^TENetPacket;
      PENetAcknowledgement=^TENetAcknowledgement;
      TENetAcknowledgement=record
       acknowledgementList:TENetListNode;
-      sentTime:longword;
+      sentTime:TENETUInt32;
       command:TENetProtocol;
      end;
 
      PENetOutgoingCommand=^TENetOutgoingCommand;
      TENetOutgoingCommand=record
       outgoingCommandList:TENetListNode;
-      reliableSequenceNumber:word;
-      unreliableSequenceNumber:word;
-      sentTime:longword;
-      roundTripTimeout:longword;
-      roundTripTimeoutLimit:longword;
-      fragmentOffset:longword;
-      fragmentLength:word;
-      sendAttempts:word;
+      reliableSequenceNumber:TENETUInt16;
+      unreliableSequenceNumber:TENETUInt16;
+      sentTime:TENETUInt32;
+      roundTripTimeout:TENETUInt32;
+      roundTripTimeoutLimit:TENETUInt32;
+      fragmentOffset:TENETUInt32;
+      fragmentLength:TENETUInt16;
+      sendAttempts:TENETUInt16;
       command:TENetProtocol;
       packet:PENetPacket;
      end;
@@ -494,26 +789,26 @@ type PENetPacket=^TENetPacket;
      PENetIncomingCommand=^TENetIncomingCommand;
      TENetIncomingCommand=record
       incomingCommandList:TENetListNode;
-      reliableSequenceNumber:word;
-      unreliableSequenceNumber:word;
+      reliableSequenceNumber:TENETUInt16;
+      unreliableSequenceNumber:TENETUInt16;
       command:TENetProtocol;
-      fragmentCount:longword;
-      fragmentsRemaining:longword;
+      fragmentCount:TENETUInt32;
+      fragmentsRemaining:TENETUInt32;
       fragments:plongwords;
       packet:PENetPacket;
      end;
 
      PENetPeerState=^TENetPeerState;
-     TENetPeerState=byte;
+     TENetPeerState=TENETUInt8;
 
      PENetChannel=^TENetChannel;
      TENetChannel=record
-      outgoingReliableSequenceNumber:word;
-      outgoingUnreliableSequenceNumber:word;
-      usedReliableWindows:word;
-      reliableWindows:array[0..ENET_PEER_RELIABLE_WINDOWS-1] of word;
-      incomingReliableSequenceNumber:word;
-      incomingUnreliableSequenceNumber:word;
+      outgoingReliableSequenceNumber:TENETUInt16;
+      outgoingUnreliableSequenceNumber:TENETUInt16;
+      usedReliableWindows:TENETUInt16;
+      reliableWindows:array[0..ENET_PEER_RELIABLE_WINDOWS-1] of TENETUInt16;
+      incomingReliableSequenceNumber:TENETUInt16;
+      incomingUnreliableSequenceNumber:TENETUInt16;
       incomingReliableCommands:TENetList;
       incomingUnreliableCommands:TENetList;
      end;
@@ -527,52 +822,52 @@ type PENetPacket=^TENetPacket;
      TENetPeer=record
       dispatchList:TENetListNode;
       host:PENetHost;
-      outgoingPeerID:word;
-      incomingPeerID:word;
-      connectID:longword;
-      outgoingSessionID:byte;
-      incomingSessionID:byte;
+      outgoingPeerID:TENETUInt16;
+      incomingPeerID:TENETUInt16;
+      connectID:TENETUInt32;
+      outgoingSessionID:TENETUInt8;
+      incomingSessionID:TENETUInt8;
       address:TENetAddress;
       data:pointer;
       state:TENetPeerState;
       channels:PENetChannels;
-      channelCount:longword;
-      incomingBandwidth:longword;
-      outgoingBandwidth:longword;
-      incomingBandwidthThrottleEpoch:longword;
-      outgoingBandwidthThrottleEpoch:longword;
-      incomingDataTotal:longword;
-      outgoingDataTotal:longword;
-      lastSendTime:longword;
-      lastReceiveTime:longword;
-      nextTimeout:longword;
-      earliestTimeout:longword;
-      packetLossEpoch:longword;
-      packetsSent:longword;
-      packetsLost:longword;
-      packetLoss:longword;
-      packetLossVariance:longword;
-      packetThrottle:longword;
-      packetThrottleLimit:longword;
-      packetThrottleCounter:longword;
-      packetThrottleEpoch:longword;
-      packetThrottleAcceleration:longword;
-      packetThrottleDeceleration:longword;
-      packetThrottleInterval:longword;
-      pingInterval:longword;
-      timeoutLimit:longword;
-      timeoutMinimum:longword;
-      timeoutMaximum:longword;
-      lastRoundTripTime:longword;
-      lowestRoundTripTime:longword;
-      lastRoundTripTimeVariance:longword;
-      highestRoundTripTimeVariance:longword;
-      roundTripTime:longword;
-      roundTripTimeVariance:longword;
-      mtu:longword;
-      windowSize:longword;
-      reliableDataInTransit:longword;
-      outgoingReliableSequenceNumber:word;
+      channelCount:TENETUInt32;
+      incomingBandwidth:TENETUInt32;
+      outgoingBandwidth:TENETUInt32;
+      incomingBandwidthThrottleEpoch:TENETUInt32;
+      outgoingBandwidthThrottleEpoch:TENETUInt32;
+      incomingDataTotal:TENETUInt32;
+      outgoingDataTotal:TENETUInt32;
+      lastSendTime:TENETUInt32;
+      lastReceiveTime:TENETUInt32;
+      nextTimeout:TENETUInt32;
+      earliestTimeout:TENETUInt32;
+      packetLossEpoch:TENETUInt32;
+      packetsSent:TENETUInt32;
+      packetsLost:TENETUInt32;
+      packetLoss:TENETUInt32;
+      packetLossVariance:TENETUInt32;
+      packetThrottle:TENETUInt32;
+      packetThrottleLimit:TENETUInt32;
+      packetThrottleCounter:TENETUInt32;
+      packetThrottleEpoch:TENETUInt32;
+      packetThrottleAcceleration:TENETUInt32;
+      packetThrottleDeceleration:TENETUInt32;
+      packetThrottleInterval:TENETUInt32;
+      pingInterval:TENETUInt32;
+      timeoutLimit:TENETUInt32;
+      timeoutMinimum:TENETUInt32;
+      timeoutMaximum:TENETUInt32;
+      lastRoundTripTime:TENETUInt32;
+      lowestRoundTripTime:TENETUInt32;
+      lastRoundTripTimeVariance:TENETUInt32;
+      highestRoundTripTimeVariance:TENETUInt32;
+      roundTripTime:TENETUInt32;
+      roundTripTimeVariance:TENETUInt32;
+      mtu:TENETUInt32;
+      windowSize:TENETUInt32;
+      reliableDataInTransit:TENETUInt32;
+      outgoingReliableSequenceNumber:TENETUInt16;
       acknowledgements:TENetList;
       sentReliableCommands:TENetList;
       sentUnreliableCommands:TENetList;
@@ -580,11 +875,11 @@ type PENetPacket=^TENetPacket;
       outgoingUnreliableCommands:TENetList;
       dispatchedCommands:TENetList;
       needsDispatch:longbool;
-      incomingUnsequencedGroup:word;
-      outgoingUnsequencedGroup:word;
-      unsequencedWindow:array[0..((ENET_PEER_UNSEQUENCED_WINDOW_SIZE+31) shr 5)-1] of longword;
-      eventData:longword;
-      totalWaitingData:ENETptruint;
+      incomingUnsequencedGroup:TENETUInt16;
+      outgoingUnsequencedGroup:TENETUInt16;
+      unsequencedWindow:array[0..((ENET_PEER_UNSEQUENCED_WINDOW_SIZE+31) shr 5)-1] of TENETUInt32;
+      eventData:TENETUInt32;
+      totalWaitingData:TENETPtrUInt;
      end;
 
      PENetPeers=^TENetPeers;
@@ -593,65 +888,65 @@ type PENetPacket=^TENetPacket;
      PENetCompressor=^TENetCompressor;
      TENetCompressor=record
       context:pointer;
-      compress:function(context:pointer;inBuffer:PENetBuffer;inBufferCount,inLimit:longint;outData:pointer;outLimit:longint):longint;
-      decompress:function(context:pointer;inData:pointer;inLimit:longint;outData:pointer;outLimit:longint):longint;
+      compress:function(context:pointer;inBuffer:PENetBuffer;inBufferCount,inLimit:TENETInt32;outData:pointer;outLimit:TENETInt32):TENETInt32;
+      decompress:function(context:pointer;inData:pointer;inLimit:TENETInt32;outData:pointer;outLimit:TENETInt32):TENETInt32;
       destroy:procedure(context:pointer);
      end;
 
-     TENetChecksumCallback=function(buffers:PENetBuffer;bufferCount:longint):longword;
+     TENetChecksumCallback=function(buffers:PENetBuffer;bufferCount:TENETInt32):TENETUInt32;
 
      PENetEvent=^TENetEvent;
 
-     TENetInterceptCallback=function(host:PENetHost;event:PENetEvent):longint;
+     TENetInterceptCallback=function(host:PENetHost;event:PENetEvent):TENETInt32;
 
      TENetHost=record
       socket4:TENetSocket;
       socket6:TENetSocket;
       address:TENetAddress;
-      incomingBandwidth:longword;
-      outgoingBandwidth:longword;
-      bandwidthThrottleEpoch:longword;
-      mtu:longword;
-      randomSeed:longword;
-      recalculateBandwidthLimits:longint;
+      incomingBandwidth:TENETUInt32;
+      outgoingBandwidth:TENETUInt32;
+      bandwidthThrottleEpoch:TENETUInt32;
+      mtu:TENETUInt32;
+      randomSeed:TENETUInt32;
+      recalculateBandwidthLimits:TENETInt32;
       peers:PENetPeers;
-      peerCount:longint;
-      channelLimit:longword;
-      serviceTime:longword;
+      peerCount:TENETInt32;
+      channelLimit:TENETUInt32;
+      serviceTime:TENETUInt32;
       dispatchQueue:TENetList;
-      continueSending:longint;
-      packetSize:longint;
-      headerFlags:word;
+      continueSending:TENETInt32;
+      packetSize:TENETInt32;
+      headerFlags:TENETUInt16;
       commands:array[0..ENET_PROTOCOL_MAXIMUM_PACKET_COMMANDS-1] of TENetProtocol;
-      commandCount:longint;
+      commandCount:TENETInt32;
       buffers:array[0..ENET_BUFFER_MAXIMUM-1] of TENetBuffer;
-      bufferCount:longint;
+      bufferCount:TENETInt32;
       checksum:TENetChecksumCallback;
       compressor:TENetCompressor;
-      packetData:array[0..1,0..ENET_PROTOCOL_MAXIMUM_MTU-1] of byte;
+      packetData:array[0..1,0..ENET_PROTOCOL_MAXIMUM_MTU-1] of TENETUInt8;
       receivedAddress:TENetAddress;
       receivedData:PAnsiChar;
-      receivedDataLength:longint;
-      totalSentData:longword;
-      totalSentPackets:longword;
-      totalReceivedData:longword;
-      totalReceivedPackets:longword;
+      receivedDataLength:TENETInt32;
+      totalSentData:TENETUInt32;
+      totalSentPackets:TENETUInt32;
+      totalReceivedData:TENETUInt32;
+      totalReceivedPackets:TENETUInt32;
       intercept:TENetInterceptCallback;
-      connectedPeers:ENETptruint;
-      bandwidthLimitedPeers:ENETptruint;
-      duplicatePeers:ENETptruint;
-      maximumPacketSize:ENETptruint;
-      maximumWaitingData:ENETptruint;
+      connectedPeers:TENETPtrUInt;
+      bandwidthLimitedPeers:TENETPtrUInt;
+      duplicatePeers:TENETPtrUInt;
+      maximumPacketSize:TENETPtrUInt;
+      maximumWaitingData:TENETPtrUInt;
      end;
 
      PENetEventType=^TENetEventType;
-     TENetEventType=byte;
+     TENetEventType=TENETUInt8;
 
      TENetEvent=record
       type_:TENetEventType;
       peer:PENetPeer;
-      channelID:byte;
-      data:longword;
+      channelID:TENETUInt8;
+      data:TENETUInt32;
       packet:PENetPacket;
      end;
 
@@ -666,162 +961,135 @@ procedure enet_list_clear(list:PENetList);
 function enet_list_insert(position:TENetListIterator;data:pointer):TENetListIterator;
 function enet_list_remove(position:TENetListIterator):pointer;
 function enet_list_move(position:TENetListIterator;dataFirst,dataLast:pointer):TENetListIterator;
-function enet_list_size(list:PENetList):longint;
+function enet_list_size(list:PENetList):TENETInt32;
 
-function ENET_TIME_LESS(a,b:longword):boolean;
-function ENET_TIME_GREATER(a,b:longword):boolean;
-function ENET_TIME_LESS_EQUAL(a,b:longword):boolean;
-function ENET_TIME_GREATER_EQUAL(a,b:longword):boolean;
-function ENET_TIME_DIFFERENCE(a,b:longword):longint;
+function ENET_TIME_LESS(a,b:TENETUInt32):boolean;
+function ENET_TIME_GREATER(a,b:TENETUInt32):boolean;
+function ENET_TIME_LESS_EQUAL(a,b:TENETUInt32):boolean;
+function ENET_TIME_GREATER_EQUAL(a,b:TENETUInt32):boolean;
+function ENET_TIME_DIFFERENCE(a,b:TENETUInt32):TENETInt32;
 
-function ENET_HOST_TO_NET_16(value:word):word;
-function ENET_HOST_TO_NET_32(value:longword):longword;
-function ENET_NET_TO_HOST_16(value:word):word;
-function ENET_NET_TO_HOST_32(value:longword):longword;
+function ENET_HOST_TO_NET_16(value:TENETUInt16):TENETUInt16;
+function ENET_HOST_TO_NET_32(value:TENETUInt32):TENETUInt32;
+function ENET_NET_TO_HOST_16(value:TENETUInt16):TENETUInt16;
+function ENET_NET_TO_HOST_32(value:TENETUInt32):TENETUInt32;
 
 procedure ENET_SOCKETSET_EMPTY(var sockset:TFDSet);
 procedure ENET_SOCKETSET_ADD(var sockset:TFDSet;socket:TSocket);
 procedure ENET_SOCKETSET_REMOVE(var sockset:TFDSet;socket:TSocket);
 function ENET_SOCKETSET_CHECK(var sockset:TFDSet;socket:TSocket):boolean;
 
-function enet_address_map4(address:longword):TENetHostAddress;
+function enet_address_map4(address:TENETUInt32):TENetHostAddress;
 
 function enet_compare_address(const a,b:TENetHostAddress):boolean;
 
 function enet_get_address_family(address:PENetAddress):TENetAddressFamily;
 
-function enet_initialize:longint;
+function enet_initialize:TENETInt32;
 procedure enet_deinitialize;
 function enet_linked_version:TENetVersion;
-function enet_host_random_seed:longword;
-function enet_time_get:longword;
-procedure enet_time_set(newTimeBase:longword);
-function enet_af(family:TENetAddressFamily):word;
-function enet_sa_size(family:TENetAddressFamily):longint;
+function enet_host_random_seed:TENETUInt32;
+function enet_time_get:TENETUInt32;
+procedure enet_time_set(newTimeBase:TENETUInt32);
+function enet_af(family:TENetAddressFamily):TENETUInt16;
+function enet_sa_size(family:TENetAddressFamily):TENETInt32;
 function enet_address_set_address(address:PENetAddress;sin:pointer):TENetAddressFamily;
-function enet_address_set_sin(sin:pointer;address:PENetAddress;family:TENetAddressFamily):longint;
-function enet_address_set_host(address:PENetAddress;name:PAnsiChar):longint;
-function enet_address_get_host_x(address:PENetAddress;name:PAnsiChar;nameLength:longint;flags:longint):longint;
-function enet_address_get_host_ip(address:PENetAddress;name:PAnsiChar;nameLength:longint):longint;
-function enet_address_get_host(address:PENetAddress;name:PAnsiChar;nameLength:longint):longint;
-function enet_socket_bind(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):longint;
-function enet_socket_get_address(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):longint;
-function enet_socket_listen(socket:TENetSocket;backlog:longint):longint;
+function enet_address_set_sin(sin:pointer;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
+function enet_address_set_host(address:PENetAddress;name:PAnsiChar):TENETInt32;
+function enet_address_get_host_x(address:PENetAddress;name:PAnsiChar;nameLength:TENETInt32;flags:TENETInt32):TENETInt32;
+function enet_address_get_host_ip(address:PENetAddress;name:PAnsiChar;nameLength:TENETInt32):TENETInt32;
+function enet_address_get_host(address:PENetAddress;name:PAnsiChar;nameLength:TENETInt32):TENETInt32;
+function enet_socket_bind(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
+function enet_socket_get_address(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
+function enet_socket_listen(socket:TENetSocket;backlog:TENETInt32):TENETInt32;
 function enet_socket_create(type_:TENetSocketType;family:TENetAddressFamily):TENetSocket;
-function enet_socket_set_option(socket:TENetSocket;option:TENetSocketOption;value:longint):longint;
-function enet_socket_get_option(socket:TENetSocket;option:TENetSocketOption;var value:longint):longint;
-function enet_socket_shutdown(socket:TENetSocket;how:TENetSocketShutdown):longint;
-function enet_socket_connect(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):longint;
+function enet_socket_set_option(socket:TENetSocket;option:TENetSocketOption;value:TENETInt32):TENETInt32;
+function enet_socket_get_option(socket:TENetSocket;option:TENetSocketOption;var value:TENETInt32):TENETInt32;
+function enet_socket_shutdown(socket:TENetSocket;how:TENetSocketShutdown):TENETInt32;
+function enet_socket_connect(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
 function enet_socket_accept(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENetSocket;
 procedure enet_socket_destroy(socket:TENetSocket);
-function enet_socket_send(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:longword;family:TENetAddressFamily):longint;
-function enet_socket_receive(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:longword;family:TENetAddressFamily):longint;
-function enet_socketset_select(maxSocket:TENetSocket;readSet,writeSet:PENetSocketSet;timeout:longword):longint;
-function enet_socket_wait(socket4,socket6:TENetSocket;condition:pointer;timeout:longword):longint;
+function enet_socket_send(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:TENETUInt32;family:TENetAddressFamily):TENETInt32;
+function enet_socket_receive(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:TENETUInt32;family:TENetAddressFamily):TENETInt32;
+function enet_socketset_select(maxSocket:TENetSocket;readSet,writeSet:PENetSocketSet;timeout:TENETUInt32):TENETInt32;
+function enet_socket_wait(socket4,socket6:TENetSocket;condition:pointer;timeout:TENETUInt32):TENETInt32;
 
-function enet_host_compress_with_range_coder(host:PENetHost):longint;
+function enet_host_compress_with_range_coder(host:PENetHost):TENETInt32;
 
-function enet_packet_create(data:pointer;dataLength:longint;flags:Longword):PENetPacket; overload;
-function enet_packet_create(const data:TENETRawByteString;flags:Longword):PENetPacket; overload;
+function enet_packet_create(data:pointer;dataLength:TENETInt32;flags:TENETUInt32):PENetPacket; overload;
+function enet_packet_create(const data:TENETRawByteString;flags:TENETUInt32):PENetPacket; overload;
 procedure enet_packet_destroy(packet:PENetPacket);
-function enet_packet_resize(packet:PENetPacket;dataLength:longword):longint;
+function enet_packet_resize(packet:PENetPacket;dataLength:TENETUInt32):TENETInt32;
 
-function enet_crc32(buffers:PENetBuffer;bufferCount:longint):longword;
+function enet_crc32(buffers:PENetBuffer;bufferCount:TENETInt32):TENETUInt32;
 
-procedure enet_peer_throttle_configure(peer:PENetPeer;interval,acceleration,deceleration:longword);
-function enet_peer_throttle(peer:PENetPeer;rtt:longword):longint;
-function enet_peer_send(peer:PENetPeer;channelID:byte;packet:PENetPacket):longint;
-function enet_peer_receive(peer:PENetPeer;channelID:pbyte):PENetPacket;
+procedure enet_peer_throttle_configure(peer:PENetPeer;interval,acceleration,deceleration:TENETUInt32);
+function enet_peer_throttle(peer:PENetPeer;rtt:TENETUInt32):TENETInt32;
+function enet_peer_send(peer:PENetPeer;channelID:TENETUInt8;packet:PENetPacket):TENETInt32;
+function enet_peer_receive(peer:PENetPeer;channelID:PENETUInt8):PENetPacket;
 procedure enet_peer_reset_outgoing_commands(queue:PENetList);
 procedure enet_peer_remove_incoming_commands(queue:PENetList;startCommand,endCommand:TENetListIterator);
 procedure enet_peer_reset_incoming_commands(queue:PENetList);
 procedure enet_peer_reset_queues(peer:PENetPeer);
 procedure enet_peer_reset(peer:PENetPeer);
 procedure enet_peer_ping(peer:PENetPeer);
-procedure enet_peer_ping_interval(peer:PENetPeer;pingInterval:longword);
-procedure enet_peer_timeout(peer:PENetPeer;timeoutLimit,timeoutMinimum,timeoutMaximum:longword);
-procedure enet_peer_disconnect_now(peer:PENetPeer;data:longword);
-procedure enet_peer_disconnect(peer:PENetPeer;data:longword);
-procedure enet_peer_disconnect_later(peer:PENetPeer;data:longword);
-function enet_peer_queue_acknowledgement(peer:PENetPeer;command:PENetProtocol;sentTime:word):PENetAcknowledgement;
+procedure enet_peer_ping_interval(peer:PENetPeer;pingInterval:TENETUInt32);
+procedure enet_peer_timeout(peer:PENetPeer;timeoutLimit,timeoutMinimum,timeoutMaximum:TENETUInt32);
+procedure enet_peer_disconnect_now(peer:PENetPeer;data:TENETUInt32);
+procedure enet_peer_disconnect(peer:PENetPeer;data:TENETUInt32);
+procedure enet_peer_disconnect_later(peer:PENetPeer;data:TENETUInt32);
+function enet_peer_queue_acknowledgement(peer:PENetPeer;command:PENetProtocol;sentTime:TENETUInt16):PENetAcknowledgement;
 procedure enet_peer_setup_outgoing_command(peer:PENetPeer;outgoingCommand:PENetOutgoingCommand);
-function enet_peer_queue_outgoing_command(peer:PENetPeer;command:PENetProtocol;packet:PENetPacket;offset:longword;length:word):PENetOutgoingCommand;
+function enet_peer_queue_outgoing_command(peer:PENetPeer;command:PENetProtocol;packet:PENetPacket;offset:TENETUInt32;length:TENETUInt16):PENetOutgoingCommand;
 procedure enet_peer_dispatch_incoming_unreliable_commands(peer:PENetPeer;channel:PENetChannel);
 procedure enet_peer_dispatch_incoming_reliable_commands(peer:PENetPeer;channel:PENetChannel);
-function enet_peer_queue_incoming_command(peer:PENetPeer;command:PENetProtocol;data:pointer;dataLength:ENETptruint;flags:longword;fragmentCount:longword):PENetIncomingCommand;
+function enet_peer_queue_incoming_command(peer:PENetPeer;command:PENetProtocol;data:pointer;dataLength:TENETPtrUInt;flags:TENETUInt32;fragmentCount:TENETUInt32):PENetIncomingCommand;
 procedure enet_peer_on_connect(peer:PENetPeer);
 procedure enet_peer_on_disconnect(peer:PENetPeer);
 
 function enet_socket_create_bind(address:PENetAddress;family:TENetAddressFamily):TENetSocket;
 
-function enet_host_create(address:PENetAddress;peerCount,channelLimit,incomingBandwidth,outgoingBandwidth:longword):PENetHost;
+function enet_host_create(address:PENetAddress;peerCount,channelLimit,incomingBandwidth,outgoingBandwidth:TENETUInt32):PENetHost;
 procedure enet_host_destroy(host:PENetHost);
-function enet_host_connect(host:PENetHost;address:PENetAddress;channelCount,data:longword):PENetPeer;
-procedure enet_host_broadcast(host:PENetHost;channelID:byte;packet:PENetPacket);
+function enet_host_connect(host:PENetHost;address:PENetAddress;channelCount,data:TENETUInt32):PENetPeer;
+procedure enet_host_broadcast(host:PENetHost;channelID:TENETUInt8;packet:PENetPacket);
 procedure enet_host_compress(host:PENetHost;compressor:PENetCompressor);
-procedure enet_host_channel_limit(host:PENetHost;channelLimit:longword);
-procedure enet_host_bandwidth_limit(host:PENetHost;incomingBandwidth,outgoingBandwidth:longword);
+procedure enet_host_channel_limit(host:PENetHost;channelLimit:TENETUInt32);
+procedure enet_host_bandwidth_limit(host:PENetHost;incomingBandwidth,outgoingBandwidth:TENETUInt32);
 procedure enet_host_bandwidth_throttle(host:PENetHost);
 
-function enet_protocol_command_size(command:byte):longint;
+function enet_protocol_command_size(command:TENETUInt8):TENETInt32;
 procedure enet_protocol_change_state(host:PENetHost;peer:PENetPeer;state:TENetPeerState);
 procedure enet_protocol_dispatch_state(host:PENetHost;peer:PENetPeer;state:TENetPeerState);
-function enet_protocol_dispatch_incoming_commands(host:PENetHost;event:PENetEvent):longint;
+function enet_protocol_dispatch_incoming_commands(host:PENetHost;event:PENetEvent):TENETInt32;
 procedure enet_protocol_notify_connect(host:PENetHost;peer:PENetPeer;event:PENetEvent);
 procedure enet_protocol_notify_disconnect(host:PENetHost;peer:PENetPeer;event:PENetEvent);
 procedure enet_protocol_remove_sent_unreliable_commands(peer:PENetPeer);
-function enet_protocol_remove_sent_reliable_command(peer:PENetPeer;reliableSequenceNumber:word;channelID:byte):TENetProtocolCommand;
+function enet_protocol_remove_sent_reliable_command(peer:PENetPeer;reliableSequenceNumber:TENETUInt16;channelID:TENETUInt8):TENetProtocolCommand;
 function enet_protocol_handle_connect(host:PENetHost;header:PENetProtocolHeader;command:PENetProtocol):PENetPeer;
-function enet_protocol_handle_send_reliable(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):longint;
-function enet_protocol_handle_send_unsequenced(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):longint;
-function enet_protocol_handle_send_unreliable(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):longint;
-function enet_protocol_handle_send_fragment(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):longint;
-function enet_protocol_handle_send_unreliable_fragment(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):longint;
-function enet_protocol_handle_ping(host:PENetHost;peer:PENetPeer;command:PENetProtocol):longint;
-function enet_protocol_handle_bandwidth_limit(host:PENetHost;peer:PENetPeer;command:PENetProtocol):longint;
-function enet_protocol_handle_throttle_configure(host:PENetHost;peer:PENetPeer;command:PENetProtocol):longint;
-function enet_protocol_handle_disconnect(host:PENetHost;peer:PENetPeer;command:PENetProtocol):longint;
-function enet_protocol_handle_acknowledge(host:PENetHost;event:PENetEvent;peer:PENetPeer;command:PENetProtocol):longint;
-function enet_protocol_handle_verify_connect(host:PENetHost;event:PENetEvent;peer:PENetPeer;command:PENetProtocol):longint;
-function enet_protocol_handle_incoming_commands(host:PENetHost;event:PENetEvent):longint;
+function enet_protocol_handle_send_reliable(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):TENETInt32;
+function enet_protocol_handle_send_unsequenced(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):TENETInt32;
+function enet_protocol_handle_send_unreliable(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):TENETInt32;
+function enet_protocol_handle_send_fragment(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):TENETInt32;
+function enet_protocol_handle_send_unreliable_fragment(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):TENETInt32;
+function enet_protocol_handle_ping(host:PENetHost;peer:PENetPeer;command:PENetProtocol):TENETInt32;
+function enet_protocol_handle_bandwidth_limit(host:PENetHost;peer:PENetPeer;command:PENetProtocol):TENETInt32;
+function enet_protocol_handle_throttle_configure(host:PENetHost;peer:PENetPeer;command:PENetProtocol):TENETInt32;
+function enet_protocol_handle_disconnect(host:PENetHost;peer:PENetPeer;command:PENetProtocol):TENETInt32;
+function enet_protocol_handle_acknowledge(host:PENetHost;event:PENetEvent;peer:PENetPeer;command:PENetProtocol):TENETInt32;
+function enet_protocol_handle_verify_connect(host:PENetHost;event:PENetEvent;peer:PENetPeer;command:PENetProtocol):TENETInt32;
+function enet_protocol_handle_incoming_commands(host:PENetHost;event:PENetEvent):TENETInt32;
 procedure enet_protocol_send_acknowledgements(host:PENetHost;peer:PENetPeer);
-function enet_protocol_receive_incoming_commands(host:PENetHost;event:PENetEvent;family:TENetAddressFamily):longint;
+function enet_protocol_receive_incoming_commands(host:PENetHost;event:PENetEvent;family:TENetAddressFamily):TENETInt32;
 procedure enet_protocol_send_unreliable_outgoing_commands(host:PENetHost;peer:PENetPeer);
-function enet_protocol_check_timeouts(host:PENetHost;peer:PENetPeer;event:PENetEvent):longint;
-function enet_protocol_send_reliable_outgoing_commands(host:PENetHost;peer:PENetPeer):longint;
-function enet_protocol_send_outgoing_commands(host:PENetHost;event:PENetEvent;checkForTimeouts:longint):longint;
+function enet_protocol_check_timeouts(host:PENetHost;peer:PENetPeer;event:PENetEvent):TENETInt32;
+function enet_protocol_send_reliable_outgoing_commands(host:PENetHost;peer:PENetPeer):TENETInt32;
+function enet_protocol_send_outgoing_commands(host:PENetHost;event:PENetEvent;checkForTimeouts:TENETInt32):TENETInt32;
 procedure enet_host_flush(host:PENetHost);
-function enet_host_check_events(host:PENetHost;event:PENetEvent):longint;
-function enet_host_service(host:PENetHost;event:PENetEvent;timeout:longword):longint;
+function enet_host_check_events(host:PENetHost;event:PENetEvent):TENETInt32;
+function enet_host_service(host:PENetHost;event:PENetEvent;timeout:TENETUInt32):TENETInt32;
 
 implementation
-
-{$ifdef fpc}
- {$undef OldDelphi}
-{$else}
- {$ifdef conditionalexpressions}
-  {$if CompilerVersion>=23.0}
-   {$undef OldDelphi}
-type qword=uint64;
-     ptruint=NativeUInt;
-     ptrint=NativeInt;
-  {$else}
-   {$define OldDelphi}
-  {$ifend}
- {$else}
-  {$define OldDelphi}
- {$endif}
-{$endif}
-{$ifdef OldDelphi}
-type qword=int64;
-{$ifdef cpu64}
-     ptruint=qword;
-     ptrint=int64;
-{$else}
-     ptruint=longword;
-     ptrint=longint;
-{$endif}
-{$endif}
 
 function enet_list_begin(list:pointer):pointer;
 begin
@@ -894,7 +1162,7 @@ begin
  result:=first;
 end;
 
-function enet_list_size(list:PENetList):longint;
+function enet_list_size(list:PENetList):TENETInt32;
 var position:TENetListIterator;
 begin
  result:=0;
@@ -907,27 +1175,27 @@ begin
  end;
 end;
 
-function ENET_TIME_LESS(a,b:longword):boolean;
+function ENET_TIME_LESS(a,b:TENETUInt32):boolean;
 begin
  result:=(a-b)>=ENET_TIME_OVERFLOW;
 end;
 
-function ENET_TIME_GREATER(a,b:longword):boolean;
+function ENET_TIME_GREATER(a,b:TENETUInt32):boolean;
 begin
  result:=(b-a)>=ENET_TIME_OVERFLOW;
 end;
 
-function ENET_TIME_LESS_EQUAL(a,b:longword):boolean;
+function ENET_TIME_LESS_EQUAL(a,b:TENETUInt32):boolean;
 begin
  result:=not ((b-a)>=ENET_TIME_OVERFLOW);
 end;
 
-function ENET_TIME_GREATER_EQUAL(a,b:longword):boolean;
+function ENET_TIME_GREATER_EQUAL(a,b:TENETUInt32):boolean;
 begin
  result:=not ((a-b)>=ENET_TIME_OVERFLOW);
 end;
 
-function ENET_TIME_DIFFERENCE(a,b:longword):longint;
+function ENET_TIME_DIFFERENCE(a,b:TENETUInt32):TENETInt32;
 begin
  if (a-b)>=ENET_TIME_OVERFLOW then begin
   result:=b-a;
@@ -936,22 +1204,22 @@ begin
  end;
 end;
 
-function ENET_HOST_TO_NET_16(value:word):word;
+function ENET_HOST_TO_NET_16(value:TENETUInt16):TENETUInt16;
 begin
  result:=htons(value);
 end;
 
-function ENET_HOST_TO_NET_32(value:longword):longword;
+function ENET_HOST_TO_NET_32(value:TENETUInt32):TENETUInt32;
 begin
  result:=htonl(value);
 end;
 
-function ENET_NET_TO_HOST_16(value:word):word;
+function ENET_NET_TO_HOST_16(value:TENETUInt16):TENETUInt16;
 begin
  result:=ntohs(value);
 end;
 
-function ENET_NET_TO_HOST_32(value:longword):longword;
+function ENET_NET_TO_HOST_32(value:TENETUInt32):TENETUInt32;
 begin
  result:=ntohl(value);
 end;
@@ -992,10 +1260,10 @@ begin
 {$endif}
 end;
 
-function enet_address_map4(address:longword):TENetHostAddress;
+function enet_address_map4(address:TENETUInt32):TENetHostAddress;
 begin
  result:=ENET_IPV4MAPPED_PREFIX_INIT;
- longword(pointer(@result.addr[12])^):=address;
+ TENETUInt32(pointer(@result.addr[12])^):=address;
 end;
 
 function enet_compare_address(const a,b:TENetHostAddress):boolean;
@@ -1023,20 +1291,20 @@ begin
  end;
 end;
 
-const timeBase:longword=0;
+const timeBase:TENETUInt32=0;
 
 {$ifdef unix}
 const SOCKET_ERROR=-1;
 
 type PSockaddrStorage=^TSockaddrStorage;
      TSockaddrStorage=record
-      ss_family:word;
-      _ss_pad1:array[0..5] of byte;
-      _ss_align:int64;
-      _ss_pad2:array[0..119] of byte;
+      ss_family:TENETUInt16;
+      _ss_pad1:array[0..5] of TENETUInt8;
+      _ss_align:TENETInt64;
+      _ss_pad2:array[0..119] of TENETUInt8;
      end;
 
-function enet_initialize:longint;
+function enet_initialize:TENETInt32;
 begin
  result:=0;
 end;
@@ -1045,28 +1313,28 @@ procedure enet_deinitialize;
 begin
 end;
 
-function enet_host_random_seed:longword;
+function enet_host_random_seed:TENETUInt32;
 var tv:TTimeVal;
 begin
  fpgettimeofday(@tv,nil);
  result:=((tv.tv_sec*1000)+(tv.tv_usec div 1000))-timeBase;
 end;
 
-function enet_time_get:longword;
+function enet_time_get:TENETUInt32;
 var tv:TTimeVal;
 begin
  fpgettimeofday(@tv,nil);
  result:=((tv.tv_sec*1000)+(tv.tv_usec div 1000))-timeBase;
 end;
 
-procedure enet_time_set(newTimeBase:longword);
+procedure enet_time_set(newTimeBase:TENETUInt32);
 var tv:TTimeVal;
 begin
  fpgettimeofday(@tv,nil);
  timeBase:=((tv.tv_sec*1000)+(tv.tv_usec div 1000))-newTimeBase;
 end;
 
-function enet_af(family:TENetAddressFamily):word;
+function enet_af(family:TENetAddressFamily):TENETUInt16;
 begin
  case family of
   ENET_IPV4:begin
@@ -1081,7 +1349,7 @@ begin
  end;
 end;
 
-function enet_sa_size(family:TENetAddressFamily):longint;
+function enet_sa_size(family:TENetAddressFamily):TENETInt32;
 begin
  case family of
   ENET_IPV4:begin
@@ -1118,7 +1386,7 @@ begin
  end;
 end;
 
-function enet_address_set_sin(sin:pointer;address:PENetAddress;family:TENetAddressFamily):longint;
+function enet_address_set_sin(sin:pointer;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
 begin
  FillChar(sin^,enet_sa_size(family),AnsiChar(#0));
  if (family=ENET_IPV4) and ((enet_get_address_family(address)=ENET_IPV4) or
@@ -1139,7 +1407,7 @@ begin
       (address^.host.addr[14]=ENET_HOST_ANY.addr[14]) and
       (address^.host.addr[15]=ENET_HOST_ANY.addr[15]))) then begin
   Psockaddr_in(sin)^.sin_family:=AF_INET;
-  Psockaddr_in(sin)^.sin_addr.S_addr:=longword(pointer(@address^.host.addr[12])^);
+  Psockaddr_in(sin)^.sin_addr.S_addr:=TENETUInt32(pointer(@address^.host.addr[12])^);
   Psockaddr_in(sin)^.sin_port:=ENET_HOST_TO_NET_16(address^.port);
   result:=0;
  end else if family=ENET_IPV6 then begin
@@ -1153,8 +1421,8 @@ begin
  end;
 end;
 
-function enet_address_set_host(address:PENetAddress;name:PAnsiChar):longint;
-var port:word;
+function enet_address_set_host(address:PENetAddress;name:PAnsiChar):TENETInt32;
+var port:TENETUInt16;
     Hints:TAddrInfo;
     r,res:PAddrInfo;
 begin
@@ -1182,7 +1450,7 @@ begin
  result:=0;
 end;
 
-function enet_address_get_host_x(address:PENetAddress;name:PAnsiChar;nameLength:longint;flags:longint):longint;
+function enet_address_get_host_x(address:PENetAddress;name:PAnsiChar;nameLength:TENETInt32;flags:TENETInt32):TENETInt32;
 var sin:TSockaddrStorage;
 begin
  enet_address_set_sin(@sin,address,ENET_IPV6);
@@ -1193,17 +1461,17 @@ begin
  result:=0;
 end;
 
-function enet_address_get_host_ip(address:PENetAddress;name:PAnsiChar;nameLength:longint):longint;
+function enet_address_get_host_ip(address:PENetAddress;name:PAnsiChar;nameLength:TENETInt32):TENETInt32;
 begin
  result:=enet_address_get_host_x(address,name,nameLength,NI_NUMERICHOST);
 end;
 
-function enet_address_get_host(address:PENetAddress;name:PAnsiChar;nameLength:longint):longint;
+function enet_address_get_host(address:PENetAddress;name:PAnsiChar;nameLength:TENETInt32):TENETInt32;
 begin
  result:=enet_address_get_host_x(address,name,nameLength,0);
 end;
 
-function enet_socket_bind(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):longint;
+function enet_socket_bind(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
 var sin:TSockaddrStorage;
     address_:TENetAddress;
 begin
@@ -1222,7 +1490,7 @@ begin
  end;
 end;
 
-function enet_socket_get_address(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):longint;
+function enet_socket_get_address(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
 var sin:TSockaddrStorage;
     sinLength:socklen_t;
     addressTemp:TENetAddress;
@@ -1240,7 +1508,7 @@ begin
  end;
 end;
 
-function enet_socket_listen(socket:TENetSocket;backlog:longint):longint;
+function enet_socket_listen(socket:TENetSocket;backlog:TENETInt32):TENETInt32;
 begin
  if backlog<0 then begin
   backlog:=SOMAXCONN;
@@ -1261,8 +1529,8 @@ begin
  end;
 end;
 
-function enet_socket_set_option(socket:TENetSocket;option:TENetSocketOption;value:longint):longint;
-var nonBlocking:longword;
+function enet_socket_set_option(socket:TENetSocket;option:TENetSocketOption;value:TENETInt32):TENETInt32;
+var nonBlocking:TENETUInt32;
     tv:TTimeVal;
 begin
  result:=SOCKET_ERROR;
@@ -1272,16 +1540,16 @@ begin
    result:=fpioctl(socket,FIONBIO,pointer(@nonBlocking));
   end;
   ENET_SOCKOPT_BROADCAST:begin
-   result:=fpsetsockopt(socket,SOL_SOCKET,SO_BROADCAST,pointer(@value),SizeOf(longint));
+   result:=fpsetsockopt(socket,SOL_SOCKET,SO_BROADCAST,pointer(@value),SizeOf(TENETInt32));
   end;
   ENET_SOCKOPT_REUSEADDR:begin
-   result:=fpsetsockopt(socket,SOL_SOCKET,SO_REUSEADDR,pointer(@value),SizeOf(longint));
+   result:=fpsetsockopt(socket,SOL_SOCKET,SO_REUSEADDR,pointer(@value),SizeOf(TENETInt32));
   end;
   ENET_SOCKOPT_RCVBUF:begin
-   result:=fpsetsockopt(socket,SOL_SOCKET,SO_RCVBUF,pointer(@value),SizeOf(longint));
+   result:=fpsetsockopt(socket,SOL_SOCKET,SO_RCVBUF,pointer(@value),SizeOf(TENETInt32));
   end;
   ENET_SOCKOPT_SNDBUF:begin
-   result:=fpsetsockopt(socket,SOL_SOCKET,SO_SNDBUF,pointer(@value),SizeOf(longint));
+   result:=fpsetsockopt(socket,SOL_SOCKET,SO_SNDBUF,pointer(@value),SizeOf(TENETInt32));
   end;
   ENET_SOCKOPT_RCVTIMEO:begin
    tv.tv_sec:=Value div 1000;
@@ -1294,7 +1562,7 @@ begin
    result:=fpsetsockopt(socket,SOL_SOCKET,SO_SNDTIMEO,pointer(@tv),SizeOf(TTimeVal));
   end;
   ENET_SOCKOPT_NODELAY:begin
-   result:=fpsetsockopt(socket,IPPROTO_TCP,TCP_NODELAY,pointer(@value),SizeOf(longint));
+   result:=fpsetsockopt(socket,IPPROTO_TCP,TCP_NODELAY,pointer(@value),SizeOf(TENETInt32));
   end;
  end;
  if result=SOCKET_ERROR then begin
@@ -1304,14 +1572,14 @@ begin
  end;
 end;
 
-function enet_socket_get_option(socket:TENetSocket;option:TENetSocketOption;var value:longint):longint;
-var nonBlocking:longword;
+function enet_socket_get_option(socket:TENetSocket;option:TENetSocketOption;var value:TENETInt32):TENETInt32;
+var nonBlocking:TENETUInt32;
     SockLen:socklen_t;
 begin
  result:=SOCKET_ERROR;
  case option of
   ENET_SOCKOPT_ERROR:begin
-   SockLen:=sizeof(longint);
+   SockLen:=sizeof(TENETInt32);
    result:=fpgetsockopt(socket,SOL_SOCKET,SO_ERROR,pointer(@value),@SockLen);
   end;
  end;
@@ -1322,12 +1590,12 @@ begin
  end;
 end;
 
-function enet_socket_shutdown(socket:TENetSocket;how:TENetSocketShutdown):longint;
+function enet_socket_shutdown(socket:TENetSocket;how:TENetSocketShutdown):TENETInt32;
 begin
  result:=fpshutdown(socket,how);
 end;
 
-function enet_socket_connect(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):longint;
+function enet_socket_connect(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
 var sin:TSockaddrStorage;
 begin
  enet_address_set_sin(pointer(@sin),address,family);
@@ -1363,9 +1631,9 @@ begin
  end;
 end;
 
-function enet_socket_send(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:longword;family:TENetAddressFamily):longint;
+function enet_socket_send(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:TENETUInt32;family:TENetAddressFamily):TENETInt32;
 var sin:TSockaddrStorage;
-    sentLength:longint;
+    sentLength:TENETInt32;
 begin
  if assigned(address) then begin
   enet_address_set_sin(pointer(@sin),address,family);
@@ -1392,9 +1660,9 @@ begin
  result:=sentLength;
 end;
 
-function enet_socket_receive(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:longword;family:TENetAddressFamily):longint;
+function enet_socket_receive(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:TENETUInt32;family:TENetAddressFamily):TENETInt32;
 var sin:TSockaddrStorage;
-    sinLength,recvLength:longint;
+    sinLength,recvLength:TENETInt32;
 begin
  sinLength:=enet_sa_size(family);
  recvLength:=0;
@@ -1435,7 +1703,7 @@ begin
  result:=recvLength;
 end;
 
-function enet_socketset_select(maxSocket:TENetSocket;readSet,writeSet:PENetSocketSet;timeout:longword):longint;
+function enet_socketset_select(maxSocket:TENetSocket;readSet,writeSet:PENetSocketSet;timeout:TENETUInt32):TENETInt32;
 var tv:TTimeVal;
 begin
  tv.tv_sec:=timeout div 1000;
@@ -1443,10 +1711,10 @@ begin
  result:=fpselect(maxSocket+1,@readSet,@writeSet,nil,@tv);
 end;
 
-function enet_socket_wait(socket4,socket6:TENetSocket;condition:pointer;timeout:longword):longint;
+function enet_socket_wait(socket4,socket6:TENetSocket;condition:pointer;timeout:TENETUInt32):TENETInt32;
 var readSet,writeSet:TFDSet;
     tv:TTimeVal;
-    selectCount:longint;
+    selectCount:TENETInt32;
     maxSocket:TENetSocket;
 begin
  tv.tv_sec:=timeout div 1000;
@@ -1458,7 +1726,7 @@ begin
  FD_ZERO(readSet);
  FD_ZERO(writeSet);
 {$endif}
- if (longword(condition^) and ENET_SOCKET_WAIT_SEND)<>0 then begin
+ if (TENETUInt32(condition^) and ENET_SOCKET_WAIT_SEND)<>0 then begin
   if socket4<>ENET_SOCKET_NULL then begin
 {$ifdef unix}
    fpFD_SET(socket4,writeSet);
@@ -1474,7 +1742,7 @@ begin
 {$endif}
   end;
  end;
- if (longword(condition^) and ENET_SOCKET_WAIT_RECEIVE)<>0 then begin
+ if (TENETUInt32(condition^) and ENET_SOCKET_WAIT_RECEIVE)<>0 then begin
   if socket4<>ENET_SOCKET_NULL then begin
 {$ifdef unix}
    fpFD_SET(socket4,readSet);
@@ -1500,24 +1768,24 @@ begin
  end;
  selectCount:=fpselect(maxSocket+1,@readSet,@writeSet,nil,@tv);
  if selectCount<0 then begin
-  if (errno=ESysEINTR) and ((longword(condition^) and ENET_SOCKET_WAIT_INTERRUPT)<>0) then begin
-   longword(condition^):=ENET_SOCKET_WAIT_INTERRUPT;
+  if (errno=ESysEINTR) and ((TENETUInt32(condition^) and ENET_SOCKET_WAIT_INTERRUPT)<>0) then begin
+   TENETUInt32(condition^):=ENET_SOCKET_WAIT_INTERRUPT;
    result:=0;
   end else begin
    result:=-1;
   end;
   exit;
  end;
- longword(condition^):=ENET_SOCKET_WAIT_NONE;
+ TENETUInt32(condition^):=ENET_SOCKET_WAIT_NONE;
  if selectCount=0 then begin
   result:=0;
   exit;
  end;
  if ((socket4<>ENET_SOCKET_NULL) and (fpFD_ISSET(socket4,writeSet)=1)) or ((socket6<>ENET_SOCKET_NULL) and (fpFD_ISSET(socket6,writeSet)=1)) then begin
-  longword(condition^):=longword(condition^) or ENET_SOCKET_WAIT_SEND;
+  TENETUInt32(condition^):=TENETUInt32(condition^) or ENET_SOCKET_WAIT_SEND;
  end;
  if ((socket4<>ENET_SOCKET_NULL) and (fpFD_ISSET(socket4,readSet)=1)) or ((socket6<>ENET_SOCKET_NULL) and (fpFD_ISSET(socket6,readSet)=1)) then begin
-  longword(condition^):=longword(condition^) or ENET_SOCKET_WAIT_RECEIVE;
+  TENETUInt32(condition^):=TENETUInt32(condition^) or ENET_SOCKET_WAIT_RECEIVE;
  end;
  result:=0;
 end;
@@ -1531,27 +1799,27 @@ const AF_UNSPEC=0;
       NI_NUMERICHOST=$2;
 
 type TInAddr=packed record
-      case longint of
+      case TENETInt32 of
        0:(
-        S_bytes:packed array [0..3] of byte;
+        S_bytes:packed array [0..3] of TENETUInt8;
        );
        1:(
-        S_addr:longword;
+        S_addr:TENETUInt32;
        );
      end;
 
      PSockAddrIn=^TSockAddrIn;
      TSockAddrIn=record
-      case longint of
+      case TENETInt32 of
        0:(
-        sin_family:word;
-        sin_port:word;
+        sin_family:TENETUInt16;
+        sin_port:TENETUInt16;
         sin_addr:TInAddr;
-        sin_zero:array[0..7] of byte;
+        sin_zero:array[0..7] of TENETUInt8;
        );
        1:(
-        sa_family:word;
-        sa_data:array[0..13] of byte;
+        sa_family:TENETUInt16;
+        sa_data:array[0..13] of TENETUInt8;
        );
      end;
 
@@ -1562,33 +1830,33 @@ type TInAddr=packed record
         S6_addr:packed array [0..15] of shortint;
        );
        1:(
-        u6_addr8:packed array [0..15] of byte;
+        u6_addr8:packed array [0..15] of TENETUInt8;
        );
        2:(
-        u6_addr16:packed array [0..7] of word;
+        u6_addr16:packed array [0..7] of TENETUInt16;
        );
        3:(
-        u6_addr32:packed array [0..3] of longword;
+        u6_addr32:packed array [0..3] of TENETUInt32;
        );
      end;
 
      PSockAddrIn6=^TSockAddrIn6;
      TSockAddrIn6=packed record
-      sin6_family:word;
-      sin6_port:word;
-      sin6_flowinfo:longword;
+      sin6_family:TENETUInt16;
+      sin6_port:TENETUInt16;
+      sin6_flowinfo:TENETUInt32;
       sin6_addr:TInAddr6;
-      sin6_scope_id:longword;
+      sin6_scope_id:TENETUInt32;
      end;
 
      PPAddrInfo=^PAddrInfo;
      PAddrInfo=^TAddrInfo;
      TAddrInfo=packed record
-      ai_flags:longint;
-      ai_family:longint;
-      ai_socktype:longint;
-      ai_protocol:longint;
-      ai_addrlen:longword;
+      ai_flags:TENETInt32;
+      ai_family:TENETInt32;
+      ai_socktype:TENETInt32;
+      ai_protocol:TENETInt32;
+      ai_addrlen:TENETUInt32;
       ai_canonname:PAnsiChar;
       ai_addr:PSockAddr;
       ai_next:PAddrInfo;
@@ -1596,15 +1864,15 @@ type TInAddr=packed record
 
      PSockaddrStorage=^TSockaddrStorage;
      TSockaddrStorage=record
-      ss_family:word;
-      _ss_pad1:array[0..5] of byte;
-      _ss_align:int64;
-      _ss_pad2:array[0..119] of byte;
+      ss_family:TENETUInt16;
+      _ss_pad1:array[0..5] of TENETUInt8;
+      _ss_align:TENETInt64;
+      _ss_pad2:array[0..119] of TENETUInt8;
      end;
 
-     TGetAddrInfo=function(NodeName:PAnsiChar;ServName:PAnsiChar;Hints:PAddrInfo;Addrinfo:PPAddrInfo):longint; stdcall;
+     TGetAddrInfo=function(NodeName:PAnsiChar;ServName:PAnsiChar;Hints:PAddrInfo;Addrinfo:PPAddrInfo):TENETInt32; stdcall;
      TFreeAddrInfo=procedure(ai:PAddrInfo); stdcall;
-     TGetNameInfo=function(addr:PSockAddr;namelen:Integer;host:PAnsiChar;hostlen:longword;serv:PAnsiChar;servlen:longword;flags:longint):longint; stdcall;
+     TGetNameInfo=function(addr:PSockAddr;namelen:Integer;host:PAnsiChar;hostlen:TENETUInt32;serv:PAnsiChar;servlen:TENETUInt32;flags:TENETInt32):TENETInt32; stdcall;
 
 const GetAddrInfo:TGetAddrInfo=nil;
       FreeAddrInfo:TFreeAddrInfo=nil;
@@ -1612,8 +1880,8 @@ const GetAddrInfo:TGetAddrInfo=nil;
 
       LibHandle:THandle=0;
 
-function enet_initialize:longint;
-var versionRequested:word;
+function enet_initialize:TENETInt32;
+var versionRequested:TENETUInt16;
     vWSAData:TWSAData;
 begin
  LibHandle:=0;
@@ -1656,22 +1924,22 @@ begin
  WSACleanup;
 end;
 
-function enet_host_random_seed:longword;
+function enet_host_random_seed:TENETUInt32;
 begin
  result:=timeGetTime-timeBase;
 end;
 
-function enet_time_get:longword;
+function enet_time_get:TENETUInt32;
 begin
  result:=timeGetTime-timeBase;
 end;
 
-procedure enet_time_set(newTimeBase:longword);
+procedure enet_time_set(newTimeBase:TENETUInt32);
 begin
  timeBase:=timeGetTime-newTimeBase;
 end;
 
-function enet_af(family:TENetAddressFamily):word;
+function enet_af(family:TENetAddressFamily):TENETUInt16;
 begin
  case family of
   ENET_IPV4:begin
@@ -1686,7 +1954,7 @@ begin
  end;
 end;
 
-function enet_sa_size(family:TENetAddressFamily):longint;
+function enet_sa_size(family:TENetAddressFamily):TENETInt32;
 begin
  case family of
   ENET_IPV4:begin
@@ -1723,7 +1991,7 @@ begin
  end;
 end;
 
-function enet_address_set_sin(sin:pointer;address:PENetAddress;family:TENetAddressFamily):longint;
+function enet_address_set_sin(sin:pointer;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
 begin
  FillChar(sin^,enet_sa_size(family),AnsiChar(#0));
  if (family=ENET_IPV4) and ((enet_get_address_family(address)=ENET_IPV4) or
@@ -1744,7 +2012,7 @@ begin
       (address^.host.addr[14]=ENET_HOST_ANY.addr[14]) and
       (address^.host.addr[15]=ENET_HOST_ANY.addr[15]))) then begin
   PSockAddrIn(sin)^.sin_family:=AF_INET;
-  PSockAddrIn(sin)^.sin_addr.S_addr:=longword(pointer(@address^.host.addr[12])^);
+  PSockAddrIn(sin)^.sin_addr.S_addr:=TENETUInt32(pointer(@address^.host.addr[12])^);
   PSockAddrIn(sin)^.sin_port:=ENET_HOST_TO_NET_16(address^.port);
   result:=0;
  end else if family=ENET_IPV6 then begin
@@ -1758,8 +2026,8 @@ begin
  end;
 end;
 
-function enet_address_set_host(address:PENetAddress;name:PAnsiChar):longint;
-var port:word;
+function enet_address_set_host(address:PENetAddress;name:PAnsiChar):TENETInt32;
+var port:TENETUInt16;
     Hints:TAddrInfo;
     r,res:PAddrInfo;
 begin
@@ -1787,7 +2055,7 @@ begin
  result:=0;
 end;
 
-function enet_address_get_host_x(address:PENetAddress;name:PAnsiChar;nameLength:longint;flags:longint):longint;
+function enet_address_get_host_x(address:PENetAddress;name:PAnsiChar;nameLength:TENETInt32;flags:TENETInt32):TENETInt32;
 var sin:TSockaddrStorage;
 begin
  enet_address_set_sin(@sin,address,ENET_IPV6);
@@ -1798,17 +2066,17 @@ begin
  result:=0;
 end;
 
-function enet_address_get_host_ip(address:PENetAddress;name:PAnsiChar;nameLength:longint):longint;
+function enet_address_get_host_ip(address:PENetAddress;name:PAnsiChar;nameLength:TENETInt32):TENETInt32;
 begin
  result:=enet_address_get_host_x(address,name,nameLength,NI_NUMERICHOST);
 end;
 
-function enet_address_get_host(address:PENetAddress;name:PAnsiChar;nameLength:longint):longint;
+function enet_address_get_host(address:PENetAddress;name:PAnsiChar;nameLength:TENETInt32):TENETInt32;
 begin
  result:=enet_address_get_host_x(address,name,nameLength,0);
 end;
 
-function enet_socket_bind(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):longint;
+function enet_socket_bind(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
 var sin:TSockaddrStorage;
     address_:TENetAddress;
 begin
@@ -1827,9 +2095,9 @@ begin
  end;
 end;
 
-function enet_socket_get_address(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):longint;
+function enet_socket_get_address(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
 var sin:TSockaddrStorage;
-    sinLength:longint;
+    sinLength:TENETInt32;
     addressTemp:TENetAddress;
 begin
  sinLength:=enet_sa_size(family);
@@ -1845,7 +2113,7 @@ begin
  end;
 end;
 
-function enet_socket_listen(socket:TENetSocket;backlog:longint):longint;
+function enet_socket_listen(socket:TENetSocket;backlog:TENETInt32):TENETInt32;
 begin
  if backlog<0 then begin
   backlog:=SOMAXCONN;
@@ -1866,8 +2134,8 @@ begin
  end;
 end;
 
-function enet_socket_set_option(socket:TENetSocket;option:TENetSocketOption;value:longint):longint;
-var nonBlocking:longword;
+function enet_socket_set_option(socket:TENetSocket;option:TENetSocketOption;value:TENETInt32):TENETInt32;
+var nonBlocking:TENETUInt32;
 begin
  result:=SOCKET_ERROR;
  case option of
@@ -1876,25 +2144,25 @@ begin
    result:=ioctlsocket(socket,FIONBIO,nonBlocking);
   end;
   ENET_SOCKOPT_BROADCAST:begin
-   result:=setsockopt(socket,SOL_SOCKET,SO_BROADCAST,pointer(@value),SizeOf(longint));
+   result:=setsockopt(socket,SOL_SOCKET,SO_BROADCAST,pointer(@value),SizeOf(TENETInt32));
   end;
   ENET_SOCKOPT_REUSEADDR:begin
-   result:=setsockopt(socket,SOL_SOCKET,SO_REUSEADDR,pointer(@value),SizeOf(longint));
+   result:=setsockopt(socket,SOL_SOCKET,SO_REUSEADDR,pointer(@value),SizeOf(TENETInt32));
   end;
   ENET_SOCKOPT_RCVBUF:begin
-   result:=setsockopt(socket,SOL_SOCKET,SO_RCVBUF,pointer(@value),SizeOf(longint));
+   result:=setsockopt(socket,SOL_SOCKET,SO_RCVBUF,pointer(@value),SizeOf(TENETInt32));
   end;
   ENET_SOCKOPT_SNDBUF:begin
-   result:=setsockopt(socket,SOL_SOCKET,SO_SNDBUF,pointer(@value),SizeOf(longint));
+   result:=setsockopt(socket,SOL_SOCKET,SO_SNDBUF,pointer(@value),SizeOf(TENETInt32));
   end;
   ENET_SOCKOPT_RCVTIMEO:begin
-   result:=setsockopt(socket,SOL_SOCKET,SO_RCVTIMEO,pointer(@value),SizeOf(longint));
+   result:=setsockopt(socket,SOL_SOCKET,SO_RCVTIMEO,pointer(@value),SizeOf(TENETInt32));
   end;
   ENET_SOCKOPT_SNDTIMEO:begin
-   result:=setsockopt(socket,SOL_SOCKET,SO_SNDTIMEO,pointer(@value),SizeOf(longint));
+   result:=setsockopt(socket,SOL_SOCKET,SO_SNDTIMEO,pointer(@value),SizeOf(TENETInt32));
   end;
   ENET_SOCKOPT_NODELAY:begin
-   result:=setsockopt(socket,IPPROTO_TCP,TCP_NODELAY,pointer(@value),SizeOf(longint));
+   result:=setsockopt(socket,IPPROTO_TCP,TCP_NODELAY,pointer(@value),SizeOf(TENETInt32));
   end;
  end;
  if result=SOCKET_ERROR then begin
@@ -1904,13 +2172,13 @@ begin
  end;
 end;
 
-function enet_socket_get_option(socket:TENetSocket;option:TENetSocketOption;var value:longint):longint;
-//var nonBlocking:longword;
+function enet_socket_get_option(socket:TENetSocket;option:TENetSocketOption;var value:TENETInt32):TENETInt32;
+//var nonBlocking:TENETUInt32;
 begin
  result:=SOCKET_ERROR;
  case option of
   ENET_SOCKOPT_ERROR:begin
-   result:=setsockopt(socket,SOL_SOCKET,SO_ERROR,pointer(@value),SizeOf(longint));
+   result:=setsockopt(socket,SOL_SOCKET,SO_ERROR,pointer(@value),SizeOf(TENETInt32));
   end;
  end;
  if result=SOCKET_ERROR then begin
@@ -1920,7 +2188,7 @@ begin
  end;
 end;
 
-function enet_socket_shutdown(socket:TENetSocket;how:TENetSocketShutdown):longint;
+function enet_socket_shutdown(socket:TENetSocket;how:TENetSocketShutdown):TENETInt32;
 begin
  if shutdown(socket,how)=SOCKET_ERROR then begin
   result:=-1;
@@ -1929,7 +2197,7 @@ begin
  end;
 end;
 
-function enet_socket_connect(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):longint;
+function enet_socket_connect(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENETInt32;
 var sin:TSockaddrStorage;
 begin
  enet_address_set_sin(pointer(@sin),address,family);
@@ -1943,13 +2211,13 @@ end;
 
 function enet_socket_accept(socket:TENetSocket;address:PENetAddress;family:TENetAddressFamily):TENetSocket;
 var sin:TSockaddrStorage;
-    sinLength:longint;
+    sinLength:TENETInt32;
 begin
  sinLength:=enet_sa_size(family);
  if assigned(address) then begin
   result:=accept(socket,TSockAddr(pointer(@sin)^),sinLength);
  end else begin
-  result:=accept(socket,TSockAddr(pointer(nil)^),longint(pointer(nil)^));
+  result:=accept(socket,TSockAddr(pointer(nil)^),TENETInt32(pointer(nil)^));
  end;
  if result=INVALID_SOCKET then begin
   result:=ENET_SOCKET_NULL;
@@ -1967,9 +2235,9 @@ begin
  end;
 end;
 
-function enet_socket_send(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:longword;family:TENetAddressFamily):longint;
+function enet_socket_send(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:TENETUInt32;family:TENetAddressFamily):TENETInt32;
 var sin:TSockaddrStorage;
-    sentLength:longword;
+    sentLength:TENETUInt32;
 begin
  if assigned(address) then begin
   enet_address_set_sin(pointer(@sin),address,family);
@@ -1994,10 +2262,10 @@ begin
  result:=sentLength;
 end;
 
-function enet_socket_receive(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:longword;family:TENetAddressFamily):longint;
+function enet_socket_receive(socket:TENetSocket;address:PENetAddress;buffers:PENetBuffer;bufferCount:TENETUInt32;family:TENetAddressFamily):TENETInt32;
 var sin:TSockaddrStorage;
-    sinLength:longint;
-    flags,recvLength:longword;
+    sinLength:TENETInt32;
+    flags,recvLength:TENETUInt32;
 begin
  sinLength:=enet_sa_size(family);
  flags:=0;
@@ -2036,7 +2304,7 @@ begin
  result:=recvLength;
 end;
 
-function enet_socketset_select(maxSocket:TENetSocket;readSet,writeSet:PENetSocketSet;timeout:longword):longint;
+function enet_socketset_select(maxSocket:TENetSocket;readSet,writeSet:PENetSocketSet;timeout:TENETUInt32):TENETInt32;
 var tv:TTimeVal;
 begin
  tv.tv_sec:=timeout div 1000;
@@ -2044,17 +2312,17 @@ begin
  result:=select(maxSocket+1,@readSet,@writeSet,nil,@tv);
 end;
 
-function enet_socket_wait(socket4,socket6:TENetSocket;condition:pointer;timeout:longword):longint;
+function enet_socket_wait(socket4,socket6:TENetSocket;condition:pointer;timeout:TENETUInt32):TENETInt32;
 var readSet,writeSet:TFDSet;
     tv:TTimeVal;
-    selectCount:longint;
+    selectCount:TENETInt32;
     maxSocket:TENetSocket;
 begin
  tv.tv_sec:=timeout div 1000;
  tv.tv_usec:=(timeout mod 1000)*1000;
  FD_ZERO(readSet);
  FD_ZERO(writeSet);
- if (longword(condition^) and ENET_SOCKET_WAIT_SEND)<>0 then begin
+ if (TENETUInt32(condition^) and ENET_SOCKET_WAIT_SEND)<>0 then begin
   if socket4<>ENET_SOCKET_NULL then begin
    FD_SET(socket4,writeSet);
   end;
@@ -2062,7 +2330,7 @@ begin
    FD_SET(socket6,writeSet);
   end;
  end;
- if (longword(condition^) and ENET_SOCKET_WAIT_RECEIVE)<>0 then begin
+ if (TENETUInt32(condition^) and ENET_SOCKET_WAIT_RECEIVE)<>0 then begin
   if socket4<>ENET_SOCKET_NULL then begin
    FD_SET(socket4,readSet);
   end;
@@ -2083,16 +2351,16 @@ begin
   result:=-1;
   exit;
  end;
- longword(condition^):=ENET_SOCKET_WAIT_NONE;
+ TENETUInt32(condition^):=ENET_SOCKET_WAIT_NONE;
  if selectCount=0 then begin
   result:=0;
   exit;
  end;
  if ((socket4<>ENET_SOCKET_NULL) and FD_ISSET(socket4,writeSet)) or ((socket6<>ENET_SOCKET_NULL) and FD_ISSET(socket6,writeSet)) then begin
-  longword(condition^):=longword(condition^) or ENET_SOCKET_WAIT_SEND;
+  TENETUInt32(condition^):=TENETUInt32(condition^) or ENET_SOCKET_WAIT_SEND;
  end;
  if ((socket4<>ENET_SOCKET_NULL) and FD_ISSET(socket4,readSet)) or ((socket6<>ENET_SOCKET_NULL) and FD_ISSET(socket6,readSet)) then begin
-  longword(condition^):=longword(condition^) or ENET_SOCKET_WAIT_RECEIVE;
+  TENETUInt32(condition^):=TENETUInt32(condition^) or ENET_SOCKET_WAIT_RECEIVE;
  end;
  result:=0;
 end;
@@ -2106,15 +2374,15 @@ end;
 
 type PENetSymbol=^TENetSymbol;
      TENetSymbol=record
-      value:byte;
-      count:byte;
-      under:word;
-      left:word;
-      right:word;
-      symbols:word;
-      escapes:word;
-      total:word;
-      parent:word;
+      value:TENETUInt8;
+      count:TENETUInt8;
+      under:TENETUInt16;
+      left:TENETUInt16;
+      right:TENETUInt16;
+      symbols:TENETUInt16;
+      escapes:TENETUInt16;
+      total:TENETUInt16;
+      parent:TENETUInt16;
      end;
 
      PENetSymbols=^TENetSymbols;
@@ -2146,7 +2414,7 @@ begin
  end;
 end;
 
-procedure ENET_SYMBOL_CREATE(rangeCoder:PENetRangeCoder;symbol:PENetSymbol;value_,count_:word;var nextSymbol:longint);
+procedure ENET_SYMBOL_CREATE(rangeCoder:PENetRangeCoder;symbol:PENetSymbol;value_,count_:TENETUInt16;var nextSymbol:TENETInt32);
 begin
  symbol:=@rangeCoder^.symbols[nextSymbol];
  inc(nextSymbol);
@@ -2161,7 +2429,7 @@ begin
  symbol^.parent:=0;
 end;
 
-procedure ENET_CONTEXT_CREATE(rangecoder:PENetRangeCoder;context:PENetSymbol;escapes,minimum:word;var nextSymbol:longint);
+procedure ENET_CONTEXT_CREATE(rangecoder:PENetRangeCoder;context:PENetSymbol;escapes,minimum:TENETUInt16;var nextSymbol:TENETInt32);
 begin
  ENET_SYMBOL_CREATE(rangecoder,context,0,0,nextSymbol);
  context^.escapes:=escapes;
@@ -2169,7 +2437,7 @@ begin
  context^.symbols:=0;
 end;
 
-function enet_symbol_rescale(symbol:PENetSymbol):word;
+function enet_symbol_rescale(symbol:PENetSymbol):TENETUInt16;
 begin
  result:=0;
  while true do begin
@@ -2186,7 +2454,7 @@ begin
  end;
 end;
 
-procedure ENET_CONTEXT_RESCALE(context:PENetSymbol;minimum:word);
+procedure ENET_CONTEXT_RESCALE(context:PENetSymbol;minimum:TENETUInt16);
 begin
  if context^.symbols<>0 then begin
   context^.total:=enet_symbol_rescale(@PENetSymbols(pointer(context))^[context^.symbols]);
@@ -2197,10 +2465,10 @@ begin
  inc(context^.total,context^.escapes+(256*minimum));
 end;
 
-function ENET_RANGE_CODER_OUTPUT(var outData:pbyte;outEnd:pbyte;value:byte):boolean;
+function ENET_RANGE_CODER_OUTPUT(var outData:PENETUInt8;outEnd:PENETUInt8;value:TENETUInt8):boolean;
 begin
  result:=false;
- if ptruint(outData)>=ptruint(outEnd) then begin
+ if TENETPtrUInt(outData)>=TENETPtrUInt(outEnd) then begin
   exit;
  end;
  outData^:=value;
@@ -2208,7 +2476,7 @@ begin
  result:=true;
 end;
 
-function ENET_RANGE_CODER_ENCODE(var outData:pbyte;outEnd:pbyte;var encodeLow,encodeRange:longword;under,count,total:word):boolean;
+function ENET_RANGE_CODER_ENCODE(var outData:PENETUInt8;outEnd:PENETUInt8;var encodeLow,encodeRange:TENETUInt32;under,count,total:TENETUInt16):boolean;
 begin
  result:=false;
  encodeRange:=encodeRange div total;
@@ -2230,7 +2498,7 @@ begin
  result:=true;
 end;
 
-function ENET_RANGE_CODER_FLUSH(var outData:pbyte;outEnd:pbyte;var encodeLow:longword):boolean;
+function ENET_RANGE_CODER_FLUSH(var outData:PENETUInt8;outEnd:PENETUInt8;var encodeLow:TENETUInt32):boolean;
 begin
  result:=false;
  while encodeLow<>0 do begin
@@ -2242,7 +2510,7 @@ begin
  result:=true;
 end;
 
-procedure ENET_RANGE_CODER_FREE_SYMBOLS(rangeCoder:PENetRangeCoder;var root:PENetSymbol;var nextSymbol:longint;var predicted:word;var order:longint);
+procedure ENET_RANGE_CODER_FREE_SYMBOLS(rangeCoder:PENetRangeCoder;var root:PENetSymbol;var nextSymbol:TENETInt32;var predicted:TENETUInt16;var order:TENETInt32);
 begin
  if nextSymbol>=((sizeof(rangeCoder^.symbols) div sizeof(TENetSymbol))-ENET_SUBCONTEXT_ORDER) then begin
   nextSymbol:=0;
@@ -2252,14 +2520,14 @@ begin
  end;
 end;
 
-procedure ENET_CONTEXT_ENCODE(rangeCoder:PENetRangeCoder;var context:PENetSymbol;var symbol_:PENetSymbol;var value_:byte;var under_:word;var count_:word;update:word;minimum:word;var nextSymbol:longint);
+procedure ENET_CONTEXT_ENCODE(rangeCoder:PENetRangeCoder;var context:PENetSymbol;var symbol_:PENetSymbol;var value_:TENETUInt8;var under_:TENETUInt16;var count_:TENETUInt16;update:TENETUInt16;minimum:TENETUInt16;var nextSymbol:TENETInt32);
 var node:PENetSymbol;
 begin
  under_:=value_*minimum;
  count_:=minimum;
  if context^.symbols=0 then begin
   ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-  context^.symbols:=(ptrint(symbol_)-ptrint(context)) div sizeof(TENetSymbol);
+  context^.symbols:=(TENETPtrInt(symbol_)-TENETPtrInt(context)) div sizeof(TENetSymbol);
  end else begin
   node:=@PENetSymbols(pointer(context))^[context^.symbols];
   while true do begin
@@ -2270,7 +2538,7 @@ begin
      continue;
     end;
     ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-    node^.left:=(ptrint(symbol_)-ptrint(node)) div sizeof(TENetSymbol);
+    node^.left:=(TENETPtrInt(symbol_)-TENETPtrInt(node)) div sizeof(TENetSymbol);
    end else if value_>node^.value then begin
     inc(under_,node^.under);
     if node^.right<>0 then begin
@@ -2278,7 +2546,7 @@ begin
      continue;
     end;
     ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-    node^.right:=(ptrint(symbol_)-ptrint(node)) div sizeof(TENetSymbol);
+    node^.right:=(TENETPtrInt(symbol_)-TENETPtrInt(node)) div sizeof(TENetSymbol);
    end else begin
     inc(count_,node^.count);
     inc(under_,node^.under-node^.count);
@@ -2291,17 +2559,17 @@ begin
  end;
 end;
 
-function enet_range_coder_compress(context:pointer;inBuffers:PENetBuffer;inBufferCount,inLimit:longint;outData:pointer;outLimit:longint):longint;
+function enet_range_coder_compress(context:pointer;inBuffers:PENetBuffer;inBufferCount,inLimit:TENETInt32;outData:pointer;outLimit:TENETInt32):TENETInt32;
 label nextInput;
-type pword=^word;
+type pword=^TENETUInt16;
 var rangeCoder:PENetRangeCoder;
-    outStart,outEnd,inData,inEnd:pbyte;
-    encodeLow,encodeRange:longword;
+    outStart,outEnd,inData,inEnd:PENETUInt8;
+    encodeLow,encodeRange:TENETUInt32;
     root,subcontext,symbol:PENetSymbol;
-    predicted,count,under,total:word;
+    predicted,count,under,total:TENETUInt16;
     parent:pword;
-    order,nextSymbol:longint;
-    value:byte;
+    order,nextSymbol:TENETInt32;
+    value:TENETUInt8;
 begin
  rangeCoder:=context;
  outStart:=outData;
@@ -2326,7 +2594,7 @@ begin
 
  while true do begin
   parent:=@predicted;
-  if ptruint(inData)>=ptruint(inEnd) then begin
+  if TENETPtrUInt(inData)>=TENETPtrUInt(inEnd) then begin
    if inBufferCount<=0 then begin
     break;
    end;
@@ -2340,17 +2608,17 @@ begin
   subContext:=@rangeCoder^.symbols[predicted];
   while subcontext<>root do begin
    ENET_CONTEXT_ENCODE(rangeCoder,subcontext,symbol,value,under,count,ENET_SUBCONTEXT_SYMBOL_DELTA,0,nextSymbol);
-   parent^:=(ptrint(symbol)-ptrint(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
+   parent^:=(TENETPtrInt(symbol)-TENETPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
    parent:=@symbol^.parent;
    total:=subcontext^.total;
    if count>0 then begin
-    if not ENET_RANGE_CODER_ENCODE(pbyte(outData),outEnd,encodeLow,encodeRange,subcontext^.escapes+under,count,total) then begin
+    if not ENET_RANGE_CODER_ENCODE(PENETUInt8(outData),outEnd,encodeLow,encodeRange,subcontext^.escapes+under,count,total) then begin
      result:=0;
      exit;
     end;
    end else begin
     if (subcontext^.escapes>0) and (subcontext^.escapes<total) then begin
-     if not ENET_RANGE_CODER_ENCODE(pbyte(outData),outEnd,encodeLow,encodeRange,0,subcontext^.escapes,total) then begin
+     if not ENET_RANGE_CODER_ENCODE(PENETUInt8(outData),outEnd,encodeLow,encodeRange,0,subcontext^.escapes,total) then begin
       result:=0;
       exit;
      end;
@@ -2368,10 +2636,10 @@ begin
    subcontext:=@rangeCoder^.symbols[subcontext^.parent];
   end;
   ENET_CONTEXT_ENCODE(rangeCoder,subcontext,symbol,value,under,count,ENET_SUBCONTEXT_SYMBOL_DELTA,ENET_CONTEXT_SYMBOL_MINIMUM,nextSymbol);
-  parent^:=(ptrint(symbol)-ptrint(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
+  parent^:=(TENETPtrInt(symbol)-TENETPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
   parent:=@symbol^.parent;
   total:=root^.total;
-  if not ENET_RANGE_CODER_ENCODE(pbyte(outData),outEnd,encodeLow,encodeRange,root^.escapes+under,count,total) then begin
+  if not ENET_RANGE_CODER_ENCODE(PENETUInt8(outData),outEnd,encodeLow,encodeRange,root^.escapes+under,count,total) then begin
    result:=0;
    exit;
   end;
@@ -2387,40 +2655,40 @@ nextInput:
   end;
   ENET_RANGE_CODER_FREE_SYMBOLS(rangeCoder,root,nextSymbol,predicted,order);
  end;
- if not ENET_RANGE_CODER_FLUSH(pbyte(outData),outEnd,encodeLow) then begin
+ if not ENET_RANGE_CODER_FLUSH(PENETUInt8(outData),outEnd,encodeLow) then begin
   result:=0;
   exit;
  end;
- result:=ptrint(outData)-ptrint(outStart);
+ result:=TENETPtrInt(outData)-TENETPtrInt(outStart);
 end;
 
-procedure ENET_RANGE_CODER_SEED(var inData:pbyte;inEnd:pbyte;var decodeCode:longword);
+procedure ENET_RANGE_CODER_SEED(var inData:PENETUInt8;inEnd:PENETUInt8;var decodeCode:TENETUInt32);
 begin
- if ptruint(inData)<ptruint(inEnd) then begin
+ if TENETPtrUInt(inData)<TENETPtrUInt(inEnd) then begin
   decodeCode:=decodeCode or (inData^ shl 24);
   inc(inData);
  end;
- if ptruint(inData)<ptruint(inEnd) then begin
+ if TENETPtrUInt(inData)<TENETPtrUInt(inEnd) then begin
   decodeCode:=decodeCode or (inData^ shl 16);
   inc(inData);
  end;
- if ptruint(inData)<ptruint(inEnd) then begin
+ if TENETPtrUInt(inData)<TENETPtrUInt(inEnd) then begin
   decodeCode:=decodeCode or (inData^ shl 8);
   inc(inData);
  end;
- if ptruint(inData)<ptruint(inEnd) then begin
+ if TENETPtrUInt(inData)<TENETPtrUInt(inEnd) then begin
   decodeCode:=decodeCode or inData^;
   inc(inData);
  end;
 end;
 
-function ENET_RANGE_CODER_READ(decodeCode,decodeLow:longword;var decodeRange:longword;total:word):word;
+function ENET_RANGE_CODER_READ(decodeCode,decodeLow:TENETUInt32;var decodeRange:TENETUInt32;total:TENETUInt16):TENETUInt16;
 begin
  decodeRange:=decodeRange div total;
  result:=(decodeCode-decodeLow)-decodeRange;
 end;
 
-procedure ENET_RANGE_CODER_DECODE(var inData:pbyte;inEnd:pbyte;var decodeCode,decodeLow,decodeRange:longword;under:word;var count,total:word);
+procedure ENET_RANGE_CODER_DECODE(var inData:PENETUInt8;inEnd:PENETUInt8;var decodeCode,decodeLow,decodeRange:TENETUInt32;under:TENETUInt16;var count,total:TENETUInt16);
 begin
  inc(decodeLow,under*decodeRange);
  decodeRange:=decodeRange*count;
@@ -2432,7 +2700,7 @@ begin
    decodeRange:=(-decodeLow) and (ENET_RANGE_CODER_BOTTOM-1);
   end;
   decodeCode:=decodeCode shl 8;
-  if ptruint(inData)<ptruint(inEnd) then begin
+  if TENETPtrUInt(inData)<TENETPtrUInt(inEnd) then begin
    decodeCode:=decodeCode or inData^;
    inc(inData);
   end;
@@ -2441,9 +2709,9 @@ begin
  end;
 end;
 
-function ENET_CONTEXT_TRY_DECODE(rangeCoder:PENetRangeCoder;context:PENetSymbol;var symbol_:PENetSymbol;var code:word;var value_:byte;var under_,count_:word;update,minimum:word):boolean;
+function ENET_CONTEXT_TRY_DECODE(rangeCoder:PENetRangeCoder;context:PENetSymbol;var symbol_:PENetSymbol;var code:TENETUInt16;var value_:TENETUInt8;var under_,count_:TENETUInt16;update,minimum:TENETUInt16):boolean;
 var node:PENetSymbol;
-    after,before:word;
+    after,before:TENETUInt16;
 begin
  result:=false;
  under_:=0;
@@ -2483,9 +2751,9 @@ begin
  result:=true;
 end;
 
-procedure ENET_CONTEXT_ROOT_DECODE(rangeCoder:PENetRangeCoder;context:PENetSymbol;var symbol_:PENetSymbol;var code:word;var value_:byte;var under_,count_:word;update,minimum:word;var nextSymbol:longint);
+procedure ENET_CONTEXT_ROOT_DECODE(rangeCoder:PENetRangeCoder;context:PENetSymbol;var symbol_:PENetSymbol;var code:TENETUInt16;var value_:TENETUInt8;var under_,count_:TENETUInt16;update,minimum:TENETUInt16;var nextSymbol:TENETInt32);
 var node:PENetSymbol;
-    after,before:word;
+    after,before:TENETUInt16;
 begin
  under_:=0;
  count_:=minimum;
@@ -2493,7 +2761,7 @@ begin
   value_:=code div minimum;
   under_:=code-(code mod minimum);
   ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-  context^.symbols:=(ptrint(symbol_)-ptrint(context)) div sizeof(TENetSymbol);
+  context^.symbols:=(TENETPtrInt(symbol_)-TENETPtrInt(context)) div sizeof(TENetSymbol);
  end else begin
   node:=@PENetSymbols(pointer(context))^[context^.symbols];
   while true do begin
@@ -2508,7 +2776,7 @@ begin
     value_:=(node^.value+1)+((code-after) div minimum);
     under_:=code-((code-after) mod minimum);
     ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-    node^.right:=(ptrint(symbol_)-ptrint(node)) div sizeof(TENetSymbol);
+    node^.right:=(TENETPtrInt(symbol_)-TENETPtrInt(node)) div sizeof(TENetSymbol);
    end else if code<(after-before) then begin
     inc(node^.under,update);
     if node^.left<>0 then begin
@@ -2518,7 +2786,7 @@ begin
     value_:=(node^.value-1)-((((after-before)-code)-1) div minimum);
     under_:=code-((((after-before)-code)-1) mod minimum);
     ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-    node^.left:=(ptrint(symbol_)-ptrint(node)) div sizeof(TENetSymbol);
+    node^.left:=(TENETPtrInt(symbol_)-TENETPtrInt(node)) div sizeof(TENetSymbol);
    end else begin
     value_:=node^.value;
     inc(count_,node^.count);
@@ -2532,17 +2800,17 @@ begin
  end;
 end;
 
-function enet_range_coder_decompress(context:pointer;inData:pointer;inLimit:longint;outData:pointer;outLimit:longint):longint;
+function enet_range_coder_decompress(context:pointer;inData:pointer;inLimit:TENETInt32;outData:pointer;outLimit:TENETInt32):TENETInt32;
 label patchContexts;
-type pword=^word;
+type pword=^TENETUInt16;
 var rangeCoder:PENetRangeCoder;
-    outStart,outEnd,inEnd:pbyte;
-    decodeLow,decodeCode,decodeRange:longword;
+    outStart,outEnd,inEnd:PENETUInt8;
+    decodeLow,decodeCode,decodeRange:TENETUInt32;
     root,subcontext,symbol,patch:PENetSymbol;
-    predicted,count,under,bottom,total,code:word;
+    predicted,count,under,bottom,total,code:TENETUInt16;
     parent:pword;
-    order,nextSymbol:longint;
-    value:byte;
+    order,nextSymbol:TENETInt32;
+    value:TENETUInt8;
 begin
  rangeCoder:=context;
  outStart:=outData;
@@ -2559,7 +2827,7 @@ begin
   exit;
  end;
  ENET_CONTEXT_CREATE(rangeCoder,root,ENET_CONTEXT_ESCAPE_MINIMUM,ENET_CONTEXT_SYMBOL_MINIMUM,nextSymbol);
- ENET_RANGE_CODER_SEED(pbyte(inData),inEnd,decodeCode);
+ ENET_RANGE_CODER_SEED(PENETUInt8(inData),inEnd,decodeCode);
  while true do begin
   value:=0;
   parent:=@predicted;
@@ -2574,7 +2842,7 @@ begin
    end;
    code:=ENET_RANGE_CODER_READ(decodeCode,decodeLow,decodeRange,total);
    if code<subcontext^.escapes then begin
-    ENET_RANGE_CODER_DECODE(pbyte(inData),inEnd,decodeCode,decodeLow,decodeRange,0,subcontext^.escapes,total);
+    ENET_RANGE_CODER_DECODE(PENETUInt8(inData),inEnd,decodeCode,decodeLow,decodeRange,0,subcontext^.escapes,total);
     continue;
    end;
    dec(code,subcontext^.escapes);
@@ -2582,8 +2850,8 @@ begin
     result:=0;
     exit;
    end;
-   bottom:=(ptrint(symbol)-ptrint(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
-   ENET_RANGE_CODER_DECODE(pbyte(inData),inEnd,decodeCode,decodeLow,decodeRange,subcontext^.escapes+under,count,total);
+   bottom:=(TENETPtrInt(symbol)-TENETPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
+   ENET_RANGE_CODER_DECODE(PENETUInt8(inData),inEnd,decodeCode,decodeLow,decodeRange,subcontext^.escapes+under,count,total);
    inc(subcontext^.total,ENET_SUBCONTEXT_SYMBOL_DELTA);
    if (count>($FF-(2*ENET_SUBCONTEXT_SYMBOL_DELTA))) or (subcontext^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
     ENET_CONTEXT_RESCALE(subcontext,0);
@@ -2594,13 +2862,13 @@ begin
   total:=root^.total;
   code:=ENET_RANGE_CODER_READ(decodeCode,decodeLow,decodeRange,total);
   if code<root^.escapes then begin
-   ENET_RANGE_CODER_DECODE(pbyte(inData),inEnd,decodeCode,decodeLow,decodeRange,0,root^.escapes,total);
+   ENET_RANGE_CODER_DECODE(PENETUInt8(inData),inEnd,decodeCode,decodeLow,decodeRange,0,root^.escapes,total);
    break;
   end;
   dec(code,root^.escapes);
   ENET_CONTEXT_ROOT_DECODE(rangeCoder,root,symbol,code,value,under,count,ENET_CONTEXT_SYMBOL_DELTA,ENET_CONTEXT_SYMBOL_MINIMUM,nextSymbol);
-  bottom:=(ptrint(symbol)-ptrint(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
-  ENET_RANGE_CODER_DECODE(pbyte(inData),inEnd,decodeCode,decodeLow,decodeRange,root^.escapes+under,count,total);
+  bottom:=(TENETPtrInt(symbol)-TENETPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
+  ENET_RANGE_CODER_DECODE(PENETUInt8(inData),inEnd,decodeCode,decodeLow,decodeRange,root^.escapes+under,count,total);
   inc(root^.total,ENET_CONTEXT_SYMBOL_DELTA);
   if (count>(($FF-(2*ENET_CONTEXT_SYMBOL_DELTA))+ENET_CONTEXT_SYMBOL_MINIMUM)) or (root^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
    ENET_CONTEXT_RESCALE(root,ENET_CONTEXT_SYMBOL_MINIMUM);
@@ -2609,7 +2877,7 @@ patchContexts:
   patch:=@rangeCoder^.symbols[predicted];
   while patch<>subcontext do begin
    ENET_CONTEXT_ENCODE(rangeCoder,patch,symbol,value,under,count,ENET_SUBCONTEXT_SYMBOL_DELTA,0,nextSymbol);
-   parent^:=(ptrint(symbol)-ptrint(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
+   parent^:=(TENETPtrInt(symbol)-TENETPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
    parent:=@symbol^.parent;
    if count<=0 then begin
     inc(patch^.escapes,ENET_SUBCONTEXT_ESCAPE_DELTA);
@@ -2622,7 +2890,7 @@ patchContexts:
    patch:=@rangeCoder^.symbols[patch^.parent];
   end;
   parent^:=bottom;
-  ENET_RANGE_CODER_OUTPUT(pbyte(outData),outEnd,value);
+  ENET_RANGE_CODER_OUTPUT(PENETUInt8(outData),outEnd,value);
   if order>=ENET_SUBCONTEXT_ORDER then begin
    predicted:=rangeCoder^.symbols [predicted].parent;
   end else begin
@@ -2630,10 +2898,10 @@ patchContexts:
   end;
   ENET_RANGE_CODER_FREE_SYMBOLS(rangeCoder,root,nextSymbol,predicted,order);
  end;
- result:=ptrint(outData)-ptrint(outStart);
+ result:=TENETPtrInt(outData)-TENETPtrInt(outStart);
 end;
 
-function enet_host_compress_with_range_coder(host:PENetHost):longint;
+function enet_host_compress_with_range_coder(host:PENetHost):TENETInt32;
 var compressor:TENetCompressor;
 begin
  FillChar(compressor,sizeof(TENetcompressor),#0);
@@ -2649,7 +2917,7 @@ begin
  end;
 end;
 
-function enet_packet_create(data:pointer;dataLength:longint;flags:Longword):PENetPacket;
+function enet_packet_create(data:pointer;dataLength:TENETInt32;flags:TENETUInt32):PENetPacket;
 var packet:PENetPacket;
 begin
  GetMem(packet,sizeof(TENetPacket));
@@ -2684,7 +2952,7 @@ begin
  result:=packet;
 end;
 
-function enet_packet_create(const data:TENETRawByteString;flags:Longword):PENetPacket; overload;
+function enet_packet_create(const data:TENETRawByteString;flags:TENETUInt32):PENetPacket; overload;
 begin
  if length(data)>0 then begin
   result:=enet_packet_create(@data[1],length(data),flags);
@@ -2705,7 +2973,7 @@ begin
  FreeMem(packet);
 end;
 
-function enet_packet_resize(packet:PENetPacket;dataLength:longword):longint;
+function enet_packet_resize(packet:PENetPacket;dataLength:TENETUInt32):TENETInt32;
 var newData:pointer;
 begin
  if (dataLength<=packet^.dataLength) or ((packet^.flags and ENET_PACKET_FLAG_NO_ALLOCATE)<>0) then begin
@@ -2728,10 +2996,10 @@ end;
 
 const initializedCRC32:boolean=false;
 
-var crcTable:array[byte] of longword;
+var crcTable:array[TENETUInt8] of TENETUInt32;
 
-function reflect_crc(val:longword;bits:longint):longword;
-var bit:longint;
+function reflect_crc(val:TENETUInt32;bits:TENETInt32):TENETUInt32;
+var bit:TENETInt32;
 begin
  result:=0;
  for bit:=0 to bits-1 do begin
@@ -2743,8 +3011,8 @@ begin
 end;
 
 procedure initialize_crc32;
-var b,o:longint;
-    crc:longword;
+var b,o:TENETInt32;
+    crc:TENETUInt32;
 begin
  for b:=0 to 255 do begin
   crc:=reflect_crc(b,8) shl 24;
@@ -2760,8 +3028,8 @@ begin
  initializedCRC32:=true;
 end;
     
-function enet_crc32(buffers:PENetBuffer;bufferCount:longint):longword;
-var crc:longword;
+function enet_crc32(buffers:PENetBuffer;bufferCount:TENETInt32):TENETUInt32;
+var crc:TENETUInt32;
     data,dataEnd:pansichar;
 begin
  crc:=$FFFFFFFF;
@@ -2773,7 +3041,7 @@ begin
   data:=buffers^.data;
   dataEnd:=@data[buffers^.dataLength];
   while data<dataEnd do begin
-   crc:=(crc shr 8) xor crcTable[(crc and $FF) xor byte(data^)];
+   crc:=(crc shr 8) xor crcTable[(crc and $FF) xor TENETUInt8(data^)];
    inc(data);
   end;
   inc(buffers);
@@ -2781,7 +3049,7 @@ begin
  result:=ENET_HOST_TO_NET_32(not crc);
 end;
 
-procedure enet_peer_throttle_configure(peer:PENetPeer;interval,acceleration,deceleration:longword);
+procedure enet_peer_throttle_configure(peer:PENetPeer;interval,acceleration,deceleration:TENETUInt32);
 var command:PENetProtocol;
 begin
  peer^.packetThrottleInterval:=interval;
@@ -2795,7 +3063,7 @@ begin
  enet_peer_queue_outgoing_command(peer,@command,nil,0,0);
 end;
 
-function enet_peer_throttle(peer:PENetPeer;rtt:longword):longint;
+function enet_peer_throttle(peer:PENetPeer;rtt:TENETUInt32):TENETInt32;
 begin
  if peer^.lastRoundTripTime<=peer^.lastRoundTripTimeVariance then begin
   peer^.packetThrottle:=peer^.packetThrottleLimit;
@@ -2818,13 +3086,13 @@ begin
  end;
 end;
 
-function enet_peer_send(peer:PENetPeer;channelID:byte;packet:PENetPacket):longint;
+function enet_peer_send(peer:PENetPeer;channelID:TENETUInt8;packet:PENetPacket):TENETInt32;
 var channel:PENetChannel;
     command:TENetProtocol;
-    fragmentLength:longword;
-    fragmentCount,fragmentNumber,fragmentOffset:longword;
-    commandNumber:byte;
-    startSequenceNumber:word;
+    fragmentLength:TENETUInt32;
+    fragmentCount,fragmentNumber,fragmentOffset:TENETUInt32;
+    commandNumber:TENETUInt8;
+    startSequenceNumber:TENETUInt16;
     fragments:TENetList;
     fragment:PENetOutgoingCommand;
 begin
@@ -2835,7 +3103,7 @@ begin
  end;
  fragmentLength:=(peer^.mtu-sizeof(TENetProtocolHeader))-sizeof(TENetProtocolSendFragment);
  if assigned(peer^.host^.checksum) then begin
-  dec(fragmentLength,sizeof(longword));
+  dec(fragmentLength,sizeof(TENETUInt32));
  end;
  if packet^.dataLength>fragmentLength then begin
   fragmentCount:=(packet^.dataLength+(fragmentLength-1)) div fragmentLength;
@@ -2909,7 +3177,7 @@ begin
  end;
 end;
 
-function enet_peer_receive(peer:PENetPeer;channelID:pbyte):PENetPacket;
+function enet_peer_receive(peer:PENetPeer;channelID:PENETUInt8):PENetPacket;
 var incomingCommand:PENetIncomingCommand;
     packet:PENetPacket;
 begin   
@@ -2975,7 +3243,7 @@ end;
 
 procedure enet_peer_reset_queues(peer:PENetPeer);
 var channel:PENetChannel;
-    i:longint;
+    i:TENETInt32;
 begin
  if peer^.needsDispatch then begin
   enet_list_remove(@peer^.dispatchList);
@@ -3061,7 +3329,7 @@ begin
  end;
 end;
 
-procedure enet_peer_ping_interval(peer:PENetPeer;pingInterval:longword);
+procedure enet_peer_ping_interval(peer:PENetPeer;pingInterval:TENETUInt32);
 begin
  if pingInterval<>0 then begin
   peer^.pingInterval:=pingInterval;
@@ -3070,7 +3338,7 @@ begin
  end;
 end;
 
-procedure enet_peer_timeout(peer:PENetPeer;timeoutLimit,timeoutMinimum,timeoutMaximum:longword);
+procedure enet_peer_timeout(peer:PENetPeer;timeoutLimit,timeoutMinimum,timeoutMaximum:TENETUInt32);
 begin
  if timeoutLimit<>0 then begin
   peer^.timeoutLimit:=timeoutLimit;
@@ -3089,7 +3357,7 @@ begin
  end;
 end;
 
-procedure enet_peer_disconnect_now(peer:PENetPeer;data:longword);
+procedure enet_peer_disconnect_now(peer:PENetPeer;data:TENETUInt32);
 var command:TENetProtocol;
 begin
  if peer^.state=ENET_PEER_STATE_DISCONNECTED then begin
@@ -3106,7 +3374,7 @@ begin
  enet_peer_reset(peer);
 end;
 
-procedure enet_peer_disconnect(peer:PENetPeer;data:longword);
+procedure enet_peer_disconnect(peer:PENetPeer;data:TENETUInt32);
 var command:TENetProtocol;
 begin
  if peer^.state in [ENET_PEER_STATE_DISCONNECTING,ENET_PEER_STATE_DISCONNECTED,ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT,ENET_PEER_STATE_ZOMBIE] then begin
@@ -3131,7 +3399,7 @@ begin
  end;
 end;
 
-procedure enet_peer_disconnect_later(peer:PENetPeer;data:longword);
+procedure enet_peer_disconnect_later(peer:PENetPeer;data:TENETUInt32);
 begin
  if (peer^.state in [ENET_PEER_STATE_CONNECTED,ENET_PEER_STATE_DISCONNECT_LATER]) and not (enet_list_empty(@peer^.outgoingReliableCommands) and enet_list_empty(@peer^.outgoingUnreliableCommands) and enet_list_empty(@peer^.sentReliableCommands)) then begin
   peer^.state:=ENET_PEER_STATE_DISCONNECT_LATER;
@@ -3141,10 +3409,10 @@ begin
  end;
 end;
 
-function enet_peer_queue_acknowledgement(peer:PENetPeer;command:PENetProtocol;sentTime:word):PENetAcknowledgement;
+function enet_peer_queue_acknowledgement(peer:PENetPeer;command:PENetProtocol;sentTime:TENETUInt16):PENetAcknowledgement;
 var acknowledgement:PENetAcknowledgement;
     channel:PENetChannel;
-    reliableWindow,currentWindow:word;
+    reliableWindow,currentWindow:TENETUInt16;
 begin
  if command^.header.channelID<peer^.channelCount then begin
   channel:=@peer^.channels[command^.header.channelID];
@@ -3217,7 +3485,7 @@ begin
  end;
 end;
 
-function enet_peer_queue_outgoing_command(peer:PENetPeer;command:PENetProtocol;packet:PENetPacket;offset:longword;length:word):PENetOutgoingCommand;
+function enet_peer_queue_outgoing_command(peer:PENetPeer;command:PENetProtocol;packet:PENetPacket;offset:TENETUInt32;length:TENETUInt16):PENetOutgoingCommand;
 var outgoingCommand:PENetOutgoingCommand;
 begin
  GetMem(outgoingCommand,SizeOf(TENetOutgoingCommand));
@@ -3241,7 +3509,7 @@ end;
 procedure enet_peer_dispatch_incoming_unreliable_commands(peer:PENetPeer;channel:PENetChannel);
 var droppedCommand,startCommand,currentCommand:TENetListIterator;
     incomingCommand:PENetIncomingCommand;
-    reliableWindow,currentWindow:word;
+    reliableWindow,currentWindow:TENETUInt16;
 begin
  droppedCommand:=enet_list_begin(@channel^.incomingUnreliableCommands);
  startCommand:=droppedCommand;
@@ -3330,12 +3598,12 @@ begin
  end;
 end;
 
-function enet_peer_queue_incoming_command(peer:PENetPeer;command:PENetProtocol;data:pointer;dataLength:ENETptruint;flags:longword;fragmentCount:longword):PENetIncomingCommand;
+function enet_peer_queue_incoming_command(peer:PENetPeer;command:PENetProtocol;data:pointer;dataLength:TENETPtrUInt;flags:TENETUInt32;fragmentCount:TENETUInt32):PENetIncomingCommand;
 label discardCommand,notifyError;
 var dummyCommand:TENetIncomingCommand;
     channel:PENetChannel;
-    unreliableSequenceNumber,reliableSequenceNumber:longword;
-    reliableWindow,currentWindow:word;
+    unreliableSequenceNumber,reliableSequenceNumber:TENETUInt32;
+    reliableWindow,currentWindow:TENETUInt16;
     incomingCommand:PENetIncomingCommand;
     currentCommand:TENetListIterator;
     packet:PENetPacket;
@@ -3456,13 +3724,13 @@ begin
     
  if fragmentCount>0 then begin
   if fragmentCount<=ENET_PROTOCOL_MAXIMUM_FRAGMENT_COUNT then begin
-   GetMem(incomingCommand^.fragments,((fragmentCount+31) div 32)*sizeof(longword));
+   GetMem(incomingCommand^.fragments,((fragmentCount+31) div 32)*sizeof(TENETUInt32));
   end;
   if not assigned(incomingCommand^.fragments) then begin
    FreeMem(incomingCommand);
    goto notifyError;
   end;
-  FillChar(incomingCommand^.fragments^,((fragmentCount+31) div 32)*sizeof(longword),AnsiChar(#0));
+  FillChar(incomingCommand^.fragments^,((fragmentCount+31) div 32)*sizeof(TENETUInt32),AnsiChar(#0));
  end;
 
  if assigned(packet) then begin
@@ -3540,10 +3808,10 @@ begin
  enet_socket_set_option(result,ENET_SOCKOPT_SNDBUF,ENET_HOST_SEND_BUFFER_SIZE);
 end;
 
-function enet_host_create(address:PENetAddress;peerCount,channelLimit,incomingBandwidth,outgoingBandwidth:longword):PENetHost;
+function enet_host_create(address:PENetAddress;peerCount,channelLimit,incomingBandwidth,outgoingBandwidth:TENETUInt32):PENetHost;
 var host:PENetHost;
     currentPeer:PENetPeer;
-    family:longint;
+    family:TENETInt32;
 begin
  if peerCount>ENET_PROTOCOL_MAXIMUM_PEER_ID then begin
   result:=nil;
@@ -3605,7 +3873,7 @@ begin
  end else if channelLimit<ENET_PROTOCOL_MINIMUM_CHANNEL_COUNT then begin
   channelLimit:=ENET_PROTOCOL_MINIMUM_CHANNEL_COUNT;
  end;
- host^.randomSeed:=longword(enet_host_random_seed)+host^.address.host.addr32[0];
+ host^.randomSeed:=TENETUInt32(enet_host_random_seed)+host^.address.host.addr32[0];
  host^.randomSeed:=(host^.randomSeed shl 16) or (host^.randomSeed shr 16);
  host^.channelLimit:=channelLimit;
  host^.incomingBandwidth:=incomingBandwidth;
@@ -3637,9 +3905,9 @@ begin
  host^.intercept:=nil;
  enet_list_clear(@host^.dispatchQueue);
  currentPeer:=@host^.peers[0];
- while ptruint(pointer(currentPeer))<ptruint(pointer(@host^.peers[host^.peerCount])) do begin
+ while TENETPtrUInt(pointer(currentPeer))<TENETPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
   currentPeer^.host:=host;
-  currentPeer^.incomingPeerID:=(ptruint(pointer(currentPeer))-ptruint(pointer(@host^.peers[0]))) div sizeof(TENetPeer);
+  currentPeer^.incomingPeerID:=(TENETPtrUInt(pointer(currentPeer))-TENETPtrUInt(pointer(@host^.peers[0]))) div sizeof(TENetPeer);
   currentPeer^.outgoingSessionID:=$ff;
   currentPeer^.incomingSessionID:=$ff;
   currentPeer^.data:=nil;
@@ -3668,7 +3936,7 @@ begin
   enet_socket_destroy(host^.socket6);
  end;
  currentPeer:=@host^.peers[0];
- while ptruint(pointer(currentPeer))<ptruint(pointer(@host^.peers[host^.peerCount])) do begin
+ while TENETPtrUInt(pointer(currentPeer))<TENETPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
   enet_peer_reset(currentPeer);
   inc(currentPeer);
  end;
@@ -3679,7 +3947,7 @@ begin
  FreeMem(host);
 end;
 
-function enet_host_connect(host:PENetHost;address:PENetAddress;channelCount,data:longword):PENetPeer;
+function enet_host_connect(host:PENetHost;address:PENetAddress;channelCount,data:TENETUInt32):PENetPeer;
 var currentPeer:PENetPeer;
     channel:PENetChannel;
     command:TENetProtocol;
@@ -3690,13 +3958,13 @@ begin
   channelCount:=ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT;
  end;
  currentPeer:=@host^.peers[0];
- while ptruint(pointer(currentPeer))<ptruint(pointer(@host^.peers[host^.peerCount])) do begin
+ while TENETPtrUInt(pointer(currentPeer))<TENETPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
   if currentPeer^.state=ENET_PEER_STATE_DISCONNECTED then begin
    break;
   end;
   inc(currentPeer);
  end;
- if ptruint(pointer(currentPeer))>=ptruint(pointer(@host^.peers[host^.peerCount])) then begin
+ if TENETPtrUInt(pointer(currentPeer))>=TENETPtrUInt(pointer(@host^.peers[host^.peerCount])) then begin
   result:=nil;
   exit;
  end;
@@ -3721,7 +3989,7 @@ begin
   currentPeer^.windowSize:=ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
  end;
  channel:=@currentPeer^.channels^[0];
- while ptruint(pointer(channel))<ptruint(pointer(@currentPeer^.channels^[channelCount])) do begin
+ while TENETPtrUInt(pointer(channel))<TENETPtrUInt(pointer(@currentPeer^.channels^[channelCount])) do begin
   channel^.outgoingReliableSequenceNumber:=0;
   channel^.outgoingUnreliableSequenceNumber:=0;
   channel^.incomingReliableSequenceNumber:=0;
@@ -3751,11 +4019,11 @@ begin
  result:=currentPeer;
 end;
 
-procedure enet_host_broadcast(host:PENetHost;channelID:byte;packet:PENetPacket);
+procedure enet_host_broadcast(host:PENetHost;channelID:TENETUInt8;packet:PENetPacket);
 var currentPeer:PENetPeer;
 begin
  currentPeer:=@host^.peers[0];
- while ptruint(pointer(currentPeer))<ptruint(pointer(@host^.peers[host^.peerCount])) do begin
+ while TENETPtrUInt(pointer(currentPeer))<TENETPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
   if currentPeer^.state<>ENET_PEER_STATE_CONNECTED then begin
    inc(currentPeer);
    continue;
@@ -3780,7 +4048,7 @@ begin
  end;
 end;
 
-procedure enet_host_channel_limit(host:PENetHost;channelLimit:longword);
+procedure enet_host_channel_limit(host:PENetHost;channelLimit:TENETUInt32);
 begin
  if (channelLimit=0) or (channelLimit>ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT) then begin
   channelLimit:=ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT;
@@ -3790,7 +4058,7 @@ begin
  host^.channelLimit:=channelLimit;
 end;
 
-procedure enet_host_bandwidth_limit(host:PENetHost;incomingBandwidth,outgoingBandwidth:longword);
+procedure enet_host_bandwidth_limit(host:PENetHost;incomingBandwidth,outgoingBandwidth:TENETUInt32);
 begin
  host^.incomingBandwidth:=incomingBandwidth;
  host^.outgoingBandwidth:=outgoingBandwidth;
@@ -3799,16 +4067,16 @@ end;
 
 procedure enet_host_bandwidth_throttle(host:PENetHost);
 var timeCurrent,elapsedTime,dataTotal,peersRemaining,bandwidth,throttle,bandwidthLimit,
-    peerBandwidth:longword;
-    needsAdjustment:longint;
+    peerBandwidth:TENETUInt32;
+    needsAdjustment:TENETInt32;
     peer:PENetPeer;
     command:TENetProtocol;
 begin
  timeCurrent:=enet_time_get;
  elapsedTime:=timeCurrent-host^.bandwidthThrottleEpoch;
  peersRemaining:=host^.connectedPeers;
- dataTotal:=longword(not 0);
- bandwidth:=longword(not 0);
+ dataTotal:=TENETUInt32(not 0);
+ bandwidth:=TENETUInt32(not 0);
  throttle:=0;
  if throttle<>0 then begin
  end;
@@ -3829,7 +4097,7 @@ begin
   dataTotal:=0;
   bandwidth:=(host^.outgoingBandwidth*elapsedTime) div 1000;
   peer:=@host^.peers[0];
-  while ptruint(pointer(peer))<ptruint(pointer(@host^.peers[host^.peerCount])) do begin
+  while TENETPtrUInt(pointer(peer))<TENETPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
    if (peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER) then begin
     inc(peer);
     continue;
@@ -3846,7 +4114,7 @@ begin
    throttle:=(bandwidth*ENET_PEER_PACKET_THROTTLE_SCALE) div dataTotal;
   end;
   peer:=@host^.peers[0];
-  while ptruint(pointer(peer))<ptruint(pointer(@host^.peers[host^.peerCount])) do begin
+  while TENETPtrUInt(pointer(peer))<TENETPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
    if ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) or
       (peer^.incomingBandwidth=0) or (peer^.outgoingBandwidthThrottleEpoch=timeCurrent) then begin
     inc(peer);
@@ -3881,7 +4149,7 @@ begin
    throttle:=(bandwidth*ENET_PEER_PACKET_THROTTLE_SCALE) div dataTotal;
   end;
   peer:=@host^.peers[0];
-  while ptruint(pointer(peer))<ptruint(pointer(@host^.peers[host^.peerCount])) do begin
+  while TENETPtrUInt(pointer(peer))<TENETPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
    if ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) or
       (peer^.outgoingBandwidthThrottleEpoch=timeCurrent) then begin
     inc(peer);
@@ -3908,7 +4176,7 @@ begin
     needsAdjustment:=0;
     bandwidthLimit:=bandwidth div peersRemaining;
     peer:=@host^.peers[0];
-    while ptruint(pointer(peer))<ptruint(pointer(@host^.peers[host^.peerCount])) do begin
+    while TENETPtrUInt(pointer(peer))<TENETPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
      if ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) or (peer^.incomingBandwidthThrottleEpoch=timeCurrent) then begin
       inc(peer);
       continue;
@@ -3926,7 +4194,7 @@ begin
    end;
   end;
   peer:=@host^.peers[0];
-  while ptruint(pointer(peer))<ptruint(pointer(@host^.peers[host^.peerCount])) do begin
+  while TENETPtrUInt(pointer(peer))<TENETPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
    if (peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER) then begin
     inc(peer);
     continue;
@@ -3945,7 +4213,7 @@ begin
  end;
 end;
 
-const commandSizes:array[0..ENET_PROTOCOL_COMMAND_COUNT-1] of longint=
+const commandSizes:array[0..ENET_PROTOCOL_COMMAND_COUNT-1] of TENETInt32=
 (
  0,
  sizeof(TENetProtocolAcknowledge),
@@ -3962,7 +4230,7 @@ const commandSizes:array[0..ENET_PROTOCOL_COMMAND_COUNT-1] of longint=
  0
 );
 
-function enet_protocol_command_size(command:byte):longint;
+function enet_protocol_command_size(command:TENETUInt8):TENETInt32;
 begin
  result:=commandSizes[command];
 end;
@@ -3986,7 +4254,7 @@ begin
  end;
 end;
 
-function enet_protocol_dispatch_incoming_commands(host:PENetHost;event:PENetEvent):longint;
+function enet_protocol_dispatch_incoming_commands(host:PENetHost;event:PENetEvent):TENETInt32;
 var peer:PENetPeer;
 begin
  while not enet_list_empty(@host^.dispatchQueue) do begin
@@ -4084,13 +4352,13 @@ begin
  end;
 end;
 
-function enet_protocol_remove_sent_reliable_command(peer:PENetPeer;reliableSequenceNumber:word;channelID:byte):TENetProtocolCommand;
+function enet_protocol_remove_sent_reliable_command(peer:PENetPeer;reliableSequenceNumber:TENETUInt16;channelID:TENETUInt8):TENetProtocolCommand;
 var outgoingCommand:PENetOutgoingCommand;
     currentCommand:TENetListIterator;
     commandNumber:TENetProtocolCommand;
     wasSent:boolean;
     channel:PENetChannel;
-    reliableWindow:word;
+    reliableWindow:TENETUInt16;
 begin
  outgoingCommand:=nil;
  wasSent:=true;
@@ -4158,13 +4426,13 @@ begin
 end;
 
 function enet_protocol_handle_connect(host:PENetHost;header:PENetProtocolHeader;command:PENetProtocol):PENetPeer;
-var incomingSessionID,outgoingSessionID:byte;
-    mtu,windowSize:longword;
-    channelCount,duplicatePeers:ENETptruint;
+var incomingSessionID,outgoingSessionID:TENETUInt8;
+    mtu,windowSize:TENETUInt32;
+    channelCount,duplicatePeers:TENETPtrUInt;
     channel:PENetChannel;
     currentPeer:PENetPeer;
     verifyCommand:TENetProtocol;
-    i:longint;
+    i:TENETInt32;
 begin
  result:=nil;
  channelCount:=ENET_NET_TO_HOST_32(command^.connect.channelCount);
@@ -4326,8 +4594,8 @@ begin
  result:=currentPeer;
 end;
 
-function enet_protocol_handle_send_reliable(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):longint;
-var dataLength:longint;
+function enet_protocol_handle_send_reliable(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):TENETInt32;
+var dataLength:TENETInt32;
 begin
  if (command^.header.channelID>=peer^.channelCount) or ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) then begin
   result:=-1;
@@ -4335,7 +4603,7 @@ begin
  end;
  dataLength:=ENET_NET_TO_HOST_16(command^.sendReliable.dataLength);
  inc(currentData^,dataLength);
- if (dataLength>longint(host^.maximumPacketSize)) or (currentData^<host^.receivedData) or (currentData^>@host^.receivedData[host^.receivedDataLength]) then begin
+ if (dataLength>TENETInt32(host^.maximumPacketSize)) or (currentData^<host^.receivedData) or (currentData^>@host^.receivedData[host^.receivedDataLength]) then begin
   result:=-1;
   exit;
  end;
@@ -4346,9 +4614,9 @@ begin
  result:=0;
 end;
 
-function enet_protocol_handle_send_unsequenced(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):longint;
-var unsequencedGroup,index:longword;
-    dataLength:Longint;
+function enet_protocol_handle_send_unsequenced(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):TENETInt32;
+var unsequencedGroup,index:TENETUInt32;
+    dataLength:TENETInt32;
 begin
  if (command^.header.channelID>=peer^.channelCount) or ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) then begin
   result:=-1;
@@ -4356,7 +4624,7 @@ begin
  end;
  dataLength:=ENET_NET_TO_HOST_16(command^.sendUnsequenced.dataLength);
  inc(currentData^,dataLength);
- if (dataLength>longint(host^.maximumPacketSize)) or (currentData^<host^.receivedData) or (currentData^>@host^.receivedData[host^.receivedDataLength]) then begin
+ if (dataLength>TENETInt32(host^.maximumPacketSize)) or (currentData^<host^.receivedData) or (currentData^>@host^.receivedData[host^.receivedDataLength]) then begin
   result:=-1;
   exit;
  end;
@@ -4385,8 +4653,8 @@ begin
  result:=0;
 end;
 
-function enet_protocol_handle_send_unreliable(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):longint;
-var dataLength:longint;
+function enet_protocol_handle_send_unreliable(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):TENETInt32;
+var dataLength:TENETInt32;
 begin
  if (command^.header.channelID>=peer^.channelCount) or ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) then begin
   result:=-1;
@@ -4394,7 +4662,7 @@ begin
  end;
  dataLength:=ENET_NET_TO_HOST_16(command^.sendUnreliable.dataLength);
  inc(currentData^,dataLength);
- if (dataLength>longint(host^.maximumPacketSize)) or (currentData^<host^.receivedData) or (currentData^>@host^.receivedData[host^.receivedDataLength]) then begin
+ if (dataLength>TENETInt32(host^.maximumPacketSize)) or (currentData^<host^.receivedData) or (currentData^>@host^.receivedData[host^.receivedDataLength]) then begin
   result:=-1;
   exit;
  end;
@@ -4405,10 +4673,10 @@ begin
  result:=0;
 end;
 
-function enet_protocol_handle_send_fragment(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):longint;
-var fragmentNumber,fragmentCount,fragmentOffset,fragmentLength,startSequenceNumber,totalLength:longword;
+function enet_protocol_handle_send_fragment(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):TENETInt32;
+var fragmentNumber,fragmentCount,fragmentOffset,fragmentLength,startSequenceNumber,totalLength:TENETUInt32;
     channel:PENetChannel;
-    startWindow,currentWindow:word;
+    startWindow,currentWindow:TENETUInt16;
     currentCommand:TENetListIterator;
     startCommand:PENetIncomingCommand;
     incomingCommand:PENetIncomingCommand;
@@ -4494,9 +4762,9 @@ begin
  result:=0;
 end;
 
-function enet_protocol_handle_send_unreliable_fragment(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):longint;
-var fragmentNumber,fragmentCount,fragmentOffset,fragmentLength,reliableSequenceNumber,startSequenceNumber,totalLength:longword;
-    reliableWindow,currentWindow:word;
+function enet_protocol_handle_send_unreliable_fragment(host:PENetHost;peer:PENetPeer;command:PENetProtocol;currentData:PPAnsiChar):TENETInt32;
+var fragmentNumber,fragmentCount,fragmentOffset,fragmentLength,reliableSequenceNumber,startSequenceNumber,totalLength:TENETUInt32;
+    reliableWindow,currentWindow:TENETUInt16;
     channel:PENetChannel;
     currentCommand:TENetListIterator;
     startCommand:PENetIncomingCommand;
@@ -4594,7 +4862,7 @@ begin
  result:=0;
 end;
 
-function enet_protocol_handle_ping(host:PENetHost;peer:PENetPeer;command:PENetProtocol):longint;
+function enet_protocol_handle_ping(host:PENetHost;peer:PENetPeer;command:PENetProtocol):TENETInt32;
 begin
  if (peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER) then begin
   result:=-1;
@@ -4603,7 +4871,7 @@ begin
  end;
 end;
 
-function enet_protocol_handle_bandwidth_limit(host:PENetHost;peer:PENetPeer;command:PENetProtocol):longint;
+function enet_protocol_handle_bandwidth_limit(host:PENetHost;peer:PENetPeer;command:PENetProtocol):TENETInt32;
 begin
  if not (peer^.state in [ENET_PEER_STATE_CONNECTED,ENET_PEER_STATE_DISCONNECT_LATER]) then begin
   result:=-1;
@@ -4630,7 +4898,7 @@ begin
  end;
 end;
 
-function enet_protocol_handle_throttle_configure(host:PENetHost;peer:PENetPeer;command:PENetProtocol):longint;
+function enet_protocol_handle_throttle_configure(host:PENetHost;peer:PENetPeer;command:PENetProtocol):TENETInt32;
 begin
  if not (peer^.state in [ENET_PEER_STATE_CONNECTED,ENET_PEER_STATE_DISCONNECT_LATER]) then begin
   result:=-1;
@@ -4642,7 +4910,7 @@ begin
  end;
 end;
 
-function enet_protocol_handle_disconnect(host:PENetHost;peer:PENetPeer;command:PENetProtocol):longint;
+function enet_protocol_handle_disconnect(host:PENetHost;peer:PENetPeer;command:PENetProtocol):TENETInt32;
 begin
  if peer^.state in [ENET_PEER_STATE_DISCONNECTED,ENET_PEER_STATE_ZOMBIE,ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT] then begin
   result:=0;
@@ -4667,8 +4935,8 @@ begin
  result:=0;
 end;
 
-function enet_protocol_handle_acknowledge(host:PENetHost;event:PENetEvent;peer:PENetPeer;command:PENetProtocol):longint;
-var roundTripTime,receivedSentTime,receivedReliableSequenceNumber:longword;
+function enet_protocol_handle_acknowledge(host:PENetHost;event:PENetEvent;peer:PENetPeer;command:PENetProtocol):TENETInt32;
+var roundTripTime,receivedSentTime,receivedReliableSequenceNumber:TENETUInt32;
     commandNumber:TENetProtocolCommand;
 begin
  if peer^.state in [ENET_PEER_STATE_DISCONNECTED,ENET_PEER_STATE_ZOMBIE] then begin
@@ -4702,7 +4970,7 @@ begin
  if peer^.roundTripTimeVariance>peer^.highestRoundTripTimeVariance then begin
   peer^.highestRoundTripTimeVariance:=peer^.roundTripTimeVariance;
  end;
- if (peer^.packetThrottleEpoch=0) or (ENET_TIME_DIFFERENCE(host^.serviceTime,peer^.packetThrottleEpoch)>=longint(peer^.packetThrottleInterval)) then begin
+ if (peer^.packetThrottleEpoch=0) or (ENET_TIME_DIFFERENCE(host^.serviceTime,peer^.packetThrottleEpoch)>=TENETInt32(peer^.packetThrottleInterval)) then begin
   peer^.lastRoundTripTime:=peer^.lowestRoundTripTime;
   peer^.lastRoundTripTimeVariance:=peer^.highestRoundTripTimeVariance;
   peer^.lowestRoundTripTime:=peer^.roundTripTime;
@@ -4735,9 +5003,9 @@ begin
  result:=0;
 end;
 
-function enet_protocol_handle_verify_connect(host:PENetHost;event:PENetEvent;peer:PENetPeer;command:PENetProtocol):longint;
-var mtu,windowSize:longword;
-    channelCount:longword;
+function enet_protocol_handle_verify_connect(host:PENetHost;event:PENetEvent;peer:PENetPeer;command:PENetProtocol):TENETInt32;
+var mtu,windowSize:TENETUInt32;
+    channelCount:TENETUInt32;
 begin
  if peer^.state<>ENET_PEER_STATE_CONNECTING then begin
   result:=0;
@@ -4787,19 +5055,19 @@ begin
  result:=0;
 end;
 
-function enet_protocol_handle_incoming_commands(host:PENetHost;event:PENetEvent):longint;
+function enet_protocol_handle_incoming_commands(host:PENetHost;event:PENetEvent):TENETInt32;
 label commandError;
 var header:PENetProtocolHeader;
     command:PENetProtocol;
     peer:PENetPeer;
     currentData:PAnsiChar;
-    checksum:PLongword;
-    headerSize,originalSize,desiredChecksum,commandSize:longword;
-    peerID,flags,sentTime:word;
-    sessionID,commandNumber:byte;
+    checksum:PENETUInt32;
+    headerSize,originalSize,desiredChecksum,commandSize:TENETUInt32;
+    peerID,flags,sentTime:TENETUInt16;
+    sessionID,commandNumber:TENETUInt8;
     buffer:TENetBuffer;
 begin
- if ENETptruint(host^.receivedDataLength)<{%H-}ENETptruint(pointer(@PENetProtocolHeader(nil)^.sentTime)) then begin
+ if TENETPtrUInt(host^.receivedDataLength)<{%H-}TENETPtrUInt(pointer(@PENetProtocolHeader(nil)^.sentTime)) then begin
   result:=0;
   exit;
  end;
@@ -4811,10 +5079,10 @@ begin
  if (flags and ENET_PROTOCOL_HEADER_FLAG_SENT_TIME)<>0 then begin
   headerSize:=sizeof(TENetProtocolHeader);
  end else begin
-  headerSize:={%H-}ENETptruint(pointer(@PENetProtocolHeader(nil)^.sentTime));
+  headerSize:={%H-}TENETPtrUInt(pointer(@PENetProtocolHeader(nil)^.sentTime));
  end;
  if assigned(host^.checksum) then begin
-  inc(headerSize,sizeof(longword));
+  inc(headerSize,sizeof(TENETUInt32));
  end;
  if peerID=ENET_PROTOCOL_MAXIMUM_PEER_ID then begin
   peer:=nil;
@@ -4837,7 +5105,7 @@ begin
    result:=0;
    exit;
   end;
-  originalSize:=host^.compressor.decompress(host^.compressor.context,pointer(@pansichar(host^.receivedData)[headerSize]),longword(host^.receivedDataLength)-headerSize,@host^.packetData[1,headerSize],sizeof(host^.packetData[1])-headerSize);
+  originalSize:=host^.compressor.decompress(host^.compressor.context,pointer(@pansichar(host^.receivedData)[headerSize]),TENETUInt32(host^.receivedDataLength)-headerSize,@host^.packetData[1,headerSize],sizeof(host^.packetData[1])-headerSize);
   if (originalSize<=0) or (originalSize>(sizeof(host^.packetData[1])-headerSize)) then begin
    result:=0;
    exit;
@@ -4847,7 +5115,7 @@ begin
   host^.receivedDataLength:=headerSize+originalSize;
  end;
  if assigned(host^.checksum) then begin
-  checksum:=pointer(@host^.receivedData[headerSize-sizeof(longword)]);
+  checksum:=pointer(@host^.receivedData[headerSize-sizeof(TENETUInt32)]);
   desiredChecksum:=checksum^;
   if assigned(peer) then begin
    checksum^:=peer^.connectID;
@@ -4977,8 +5245,8 @@ commandError:
  end;
 end;
 
-function enet_protocol_receive_incoming_commands(host:PENetHost;event:PENetEvent;family:TENetAddressFamily):longint;
-var packets,receivedLength:longint;
+function enet_protocol_receive_incoming_commands(host:PENetHost;event:PENetEvent;family:TENetAddressFamily):TENETInt32;
+var packets,receivedLength:TENETInt32;
     buffer:TENetBuffer;
 begin
  for packets:=0 to 255 do begin
@@ -5039,15 +5307,15 @@ var command:PENetProtocol;
     buffer:PENetBuffer;
     acknowledgement:PENetAcknowledgement;
     currentAcknowledgement:TENetListIterator;
-    reliableSequenceNumber:word;
+    reliableSequenceNumber:TENETUInt16;
 begin
  command:=@host^.commands[host^.commandCount];
  buffer:=@host^.buffers[host^.bufferCount];
  currentAcknowledgement:=enet_list_begin(@peer^.acknowledgements);
  while currentAcknowledgement<>enet_list_end(@peer^.acknowledgements) do begin
-  if (ptruint(pointer(command))>=ptruint(pointer(@host^.commandCount))) or
-     (ptruint(pointer(buffer))>=ptruint(pointer(@host^.bufferCount))) or
-     ((peer^.mtu-longword(host^.packetSize))<sizeof(TENetProtocolAcknowledge)) then begin
+  if (TENETPtrUInt(pointer(command))>=TENETPtrUInt(pointer(@host^.commandCount))) or
+     (TENETPtrUInt(pointer(buffer))>=TENETPtrUInt(pointer(@host^.bufferCount))) or
+     ((peer^.mtu-TENETUInt32(host^.packetSize))<sizeof(TENetProtocolAcknowledge)) then begin
    host^.continueSending:=1;
    break;
   end;
@@ -5070,8 +5338,8 @@ begin
   inc(command);
   inc(buffer);
  end;
- host^.commandCount:=(ptruint(pointer(command))-ptruint(pointer(@host^.commands))) div SizeOf(TENetProtocol);
- host^.bufferCount:=(ptruint(pointer(buffer))-ptruint(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
+ host^.commandCount:=(TENETPtrUInt(pointer(command))-TENETPtrUInt(pointer(@host^.commands))) div SizeOf(TENetProtocol);
+ host^.bufferCount:=(TENETPtrUInt(pointer(buffer))-TENETPtrUInt(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
 end;
 
 procedure enet_protocol_send_unreliable_outgoing_commands(host:PENetHost;peer:PENetPeer);
@@ -5079,8 +5347,8 @@ var command:PENetProtocol;
     buffer:PENetBuffer;
     outgoingCommand:PENetOutgoingCommand;
     currentCommand:TENetListIterator;
-    commandSize:longword;
-    reliableSequenceNumber,unreliableSequenceNumber:word;
+    commandSize:TENETUInt32;
+    reliableSequenceNumber,unreliableSequenceNumber:TENETUInt16;
 begin
  command:=@host^.commands[host^.commandCount];
  buffer:=@host^.buffers[host^.bufferCount];
@@ -5088,11 +5356,11 @@ begin
  while currentCommand<>enet_list_end(@peer^.outgoingUnreliableCommands) do begin
   outgoingCommand:=PENetOutgoingCommand(currentCommand);
   commandSize:=commandSizes[outgoingCommand^.command.header.command and ENET_PROTOCOL_COMMAND_MASK];
-  if (ptruint(pointer(command))>=ptruint(pointer(@host^.commandCount))) or
-     ((ptruint(pointer(buffer))+ptruint(sizeof(TENetBuffer)))>=ptruint(pointer(@host^.bufferCount))) or
-     ((peer^.mtu-longword(host^.packetSize))<commandSize) or
+  if (TENETPtrUInt(pointer(command))>=TENETPtrUInt(pointer(@host^.commandCount))) or
+     ((TENETPtrUInt(pointer(buffer))+TENETPtrUInt(sizeof(TENetBuffer)))>=TENETPtrUInt(pointer(@host^.bufferCount))) or
+     ((peer^.mtu-TENETUInt32(host^.packetSize))<commandSize) or
      ((not assigned(outgoingCommand^.packet)) and
-      ((peer^.mtu-longword(host^.packetSize))<(commandSize+outgoingCommand^.fragmentLength))) then begin
+      ((peer^.mtu-TENETUInt32(host^.packetSize))<(commandSize+outgoingCommand^.fragmentLength))) then begin
    host^.continueSending:=1;
    break;
   end;
@@ -5139,8 +5407,8 @@ begin
   inc(command);
   inc(buffer);
  end;
- host^.commandCount:=(ptruint(pointer(command))-ptruint(pointer(@host^.commands))) div SizeOf(TENetProtocol);
- host^.bufferCount:=(ptruint(pointer(buffer))-ptruint(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
+ host^.commandCount:=(TENETPtrUInt(pointer(command))-TENETPtrUInt(pointer(@host^.commands))) div SizeOf(TENetProtocol);
+ host^.bufferCount:=(TENETPtrUInt(pointer(buffer))-TENETPtrUInt(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
  if (peer^.state=ENET_PEER_STATE_DISCONNECT_LATER) and
     enet_list_empty(@peer^.outgoingReliableCommands) and
     enet_list_empty(@peer^.outgoingUnreliableCommands) and
@@ -5149,7 +5417,7 @@ begin
  end;
 end;
 
-function enet_protocol_check_timeouts(host:PENetHost;peer:PENetPeer;event:PENetEvent):longint;
+function enet_protocol_check_timeouts(host:PENetHost;peer:PENetPeer;event:PENetEvent):TENETInt32;
 var outgoingCommand:PENetOutgoingCommand;
     currentCommand,insertPosition:TENetListIterator;
 begin
@@ -5158,16 +5426,16 @@ begin
  while currentCommand<>enet_list_end(@peer^.sentReliableCommands) do begin
   outgoingCommand:=PENetOutgoingCommand(currentCommand);
   currentCommand:=enet_list_next(currentCommand);
-  if ENET_TIME_DIFFERENCE(host^.serviceTime,outgoingCommand^.sentTime)<longint(outgoingCommand^.roundTripTimeout) then begin
+  if ENET_TIME_DIFFERENCE(host^.serviceTime,outgoingCommand^.sentTime)<TENETInt32(outgoingCommand^.roundTripTimeout) then begin
    continue;
   end;
   if (peer^.earliestTimeout=0) or ENET_TIME_LESS(outgoingCommand^.sentTime,peer^.earliestTimeout) then begin
    peer^.earliestTimeout:=outgoingCommand^.sentTime;
   end;
   if (peer^.earliestTimeout<>0) and
-     ((ENET_TIME_DIFFERENCE(host^.serviceTime,peer^.earliestTimeout)>=longint(peer^.timeoutMaximum)) or
+     ((ENET_TIME_DIFFERENCE(host^.serviceTime,peer^.earliestTimeout)>=TENETInt32(peer^.timeoutMaximum)) or
       ((outgoingCommand^.roundTripTimeout>=outgoingCommand^.roundTripTimeoutLimit) and
-       (ENET_TIME_DIFFERENCE(host^.serviceTime,peer^.earliestTimeout)>=longint(peer^.timeoutMinimum)))) then begin
+       (ENET_TIME_DIFFERENCE(host^.serviceTime,peer^.earliestTimeout)>=TENETInt32(peer^.timeoutMinimum)))) then begin
    enet_protocol_notify_disconnect(host,peer,event);
    result:=1;
    exit;
@@ -5186,16 +5454,16 @@ begin
  result:=0;
 end;
 
-function enet_protocol_send_reliable_outgoing_commands(host:PENetHost;peer:PENetPeer):longint;
+function enet_protocol_send_reliable_outgoing_commands(host:PENetHost;peer:PENetPeer):TENETInt32;
 var command:PENetProtocol;
     buffer:PENetBuffer;
     outgoingCommand:PENetOutgoingCommand;
     currentCommand:TENetListIterator;
     channel:PENetChannel;
-    reliableWindow:word;
-    commandSize:word;
-    windowExceeded,windowWrap,canPing:longint;
-    windowSize:longword;
+    reliableWindow:TENETUInt16;
+    commandSize:TENETUInt16;
+    windowExceeded,windowWrap,canPing:TENETInt32;
+    windowSize:TENETUInt32;
 begin
  command:=@host^.commands[host^.commandCount];
  buffer:=@host^.buffers[host^.bufferCount];
@@ -5237,11 +5505,11 @@ begin
   end;
   canPing:=0;
   commandSize:=commandSizes[outgoingCommand^.command.header.command and ENET_PROTOCOL_COMMAND_MASK];
-  if (ptruint(pointer(command))>=ptruint(pointer(@host^.commandCount))) or
-     ((ptruint(pointer(buffer))+ptruint(sizeof(TENetBuffer)))>=ptruint(pointer(@host^.bufferCount))) or
-     ((peer^.mtu-longword(host^.packetSize))<commandSize) or
+  if (TENETPtrUInt(pointer(command))>=TENETPtrUInt(pointer(@host^.commandCount))) or
+     ((TENETPtrUInt(pointer(buffer))+TENETPtrUInt(sizeof(TENetBuffer)))>=TENETPtrUInt(pointer(@host^.bufferCount))) or
+     ((peer^.mtu-TENETUInt32(host^.packetSize))<commandSize) or
      ((not assigned(outgoingCommand^.packet)) and
-      (word(peer^.mtu-longword(host^.packetSize))<word(commandSize+outgoingCommand^.fragmentLength))) then begin
+      (TENETUInt16(peer^.mtu-TENETUInt32(host^.packetSize))<TENETUInt16(commandSize+outgoingCommand^.fragmentLength))) then begin
    host^.continueSending:=1;
    break;
   end;
@@ -5276,20 +5544,20 @@ begin
   inc(command);
   inc(buffer);
  end;
- host^.commandCount:=(ptruint(pointer(command))-ptruint(pointer(@host^.commands))) div SizeOf(TENetProtocol);
- host^.bufferCount:=(ptruint(pointer(buffer))-ptruint(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
+ host^.commandCount:=(TENETPtrUInt(pointer(command))-TENETPtrUInt(pointer(@host^.commands))) div SizeOf(TENetProtocol);
+ host^.bufferCount:=(TENETPtrUInt(pointer(buffer))-TENETPtrUInt(pointer(@host^.buffers))) div SizeOf(TENetBuffer);
  result:=canPing;
 end;
 
-function enet_protocol_send_outgoing_commands(host:PENetHost;event:PENetEvent;checkForTimeouts:longint):longint;
-var headerData:array[0..(sizeof(TENetProtocolHeader)+sizeof(longword))-1] of byte;
+function enet_protocol_send_outgoing_commands(host:PENetHost;event:PENetEvent;checkForTimeouts:TENETInt32):TENETInt32;
+var headerData:array[0..(sizeof(TENetProtocolHeader)+sizeof(TENETUInt32))-1] of TENETUInt8;
     header:PENetProtocolHeader;
     currentPeer:PENetPeer;
-    sentLength:longint;
-    shouldCompress,packetLoss,originalSize,compressedSize:longword;
+    sentLength:TENETInt32;
+    shouldCompress,packetLoss,originalSize,compressedSize:TENETUInt32;
     family:TENetAddressFamily;
     socket:TENetSocket;
-    checksum:plongword;
+    checksum:PENETUInt32;
 begin
  header:=pointer(@headerData);
 //shouldCompress:=0;
@@ -5297,7 +5565,7 @@ begin
  while host^.continueSending<>0 do begin
   host^.continueSending:=0;
   currentPeer:=@host^.peers[0];
-  while ptruint(pointer(currentPeer))<ptruint(pointer(@host^.peers [host^.peerCount])) do begin
+  while TENETPtrUInt(pointer(currentPeer))<TENETPtrUInt(pointer(@host^.peers [host^.peerCount])) do begin
    if currentPeer^.state in [ENET_PEER_STATE_DISCONNECTED,ENET_PEER_STATE_ZOMBIE] then begin
     inc(currentPeer);
     continue;
@@ -5324,8 +5592,8 @@ begin
    if ((enet_list_empty(@currentPeer^.outgoingReliableCommands) or
        (enet_protocol_send_reliable_outgoing_commands(host,currentPeer)<>0)) and
        enet_list_empty(@currentPeer^.sentReliableCommands) and
-       (ENET_TIME_DIFFERENCE(host^.serviceTime,currentPeer^.lastReceiveTime)>=longint(currentPeer^.pingInterval)) and
-       (longword(currentPeer^.mtu-longword(host^.packetSize))>=longword(sizeof(TENetProtocolPing)))) then begin
+       (ENET_TIME_DIFFERENCE(host^.serviceTime,currentPeer^.lastReceiveTime)>=TENETInt32(currentPeer^.pingInterval)) and
+       (TENETUInt32(currentPeer^.mtu-TENETUInt32(host^.packetSize))>=TENETUInt32(sizeof(TENetProtocolPing)))) then begin
     enet_peer_ping(currentPeer);
     enet_protocol_send_reliable_outgoing_commands(host,currentPeer);
    end;
@@ -5384,7 +5652,7 @@ begin
     header^.sentTime:=ENET_HOST_TO_NET_16(host^.serviceTime and $FFFF);
     host^.buffers[0].dataLength:=sizeof(TENetProtocolHeader);
    end else begin
-    host^.buffers[0].dataLength:={%H-}ENETptruint(Pointer(@PENetProtocolHeader(nil)^.sentTime));
+    host^.buffers[0].dataLength:={%H-}TENETPtrUInt(Pointer(@PENetProtocolHeader(nil)^.sentTime));
    end;
    shouldCompress:=0;
    if assigned(host^.compressor.context) and assigned(host^.compressor.compress) then begin
@@ -5409,7 +5677,7 @@ begin
     end else begin
      checksum^:=0;
     end;
-    inc(host^.buffers[0].dataLength,sizeof(longword));
+    inc(host^.buffers[0].dataLength,sizeof(TENETUInt32));
     checksum^:=host^.checksum(@host^.buffers[0],host^.bufferCount);
    end;
    if shouldCompress>0 then begin
@@ -5448,7 +5716,7 @@ begin
  enet_protocol_send_outgoing_commands(host,nil,0);
 end;
 
-function enet_host_check_events(host:PENetHost;event:PENetEvent):longint;
+function enet_host_check_events(host:PENetHost;event:PENetEvent):TENETInt32;
 begin
  if not assigned(event) then begin
   result:=-1;
@@ -5460,8 +5728,8 @@ begin
  result:=enet_protocol_dispatch_incoming_commands(host,event);
 end;
 
-function enet_host_service(host:PENetHost;event:PENetEvent;timeout:longword):longint;
-var waitCondition:longword;
+function enet_host_service(host:PENetHost;event:PENetEvent;timeout:TENETUInt32):TENETInt32;
+var waitCondition:TENETUInt32;
 begin
  if assigned(event) then begin
   event^.type_:=ENET_EVENT_TYPE_NONE;
