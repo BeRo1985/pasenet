@@ -40,6 +40,8 @@ interface
 
 uses {$ifdef unix}BaseUnix,Unix,UnixType,Sockets,cnetdb,termio,{$else}Windows,PasENetWinSock2,MMSystem,{$endif}SysUtils,Classes,Math;
 
+type TENETRawByteString={$if declared(RawByteString)}RawByteString{$else}AnsiString{$ifend};
+
 {$ifdef fpc}
  {$undef OldDelphi}
 type ENETptruint=ptruint;
@@ -719,7 +721,8 @@ function enet_socket_wait(socket4,socket6:TENetSocket;condition:pointer;timeout:
 
 function enet_host_compress_with_range_coder(host:PENetHost):longint;
 
-function enet_packet_create(data:pointer;dataLength:longint;flags:Longword):PENetPacket;
+function enet_packet_create(data:pointer;dataLength:longint;flags:Longword):PENetPacket; overload;
+function enet_packet_create(const data:TENETRawByteString;flags:Longword):PENetPacket; overload;
 procedure enet_packet_destroy(packet:PENetPacket);
 function enet_packet_resize(packet:PENetPacket;dataLength:longword):longint;
 
@@ -2681,6 +2684,13 @@ begin
  result:=packet;
 end;
 
+function enet_packet_create(const data:TENETRawByteString;flags:Longword):PENetPacket; overload;
+begin
+ if length(data)>0 then begin
+  result:=enet_packet_create(@data[1],length(data),flags);
+ end;
+end;
+
 procedure enet_packet_destroy(packet:PENetPacket);
 begin
  if not assigned(packet) then begin
@@ -4005,7 +4015,7 @@ begin
      continue;
     end;
     event^.packet:=enet_peer_receive(peer,@event^.channelID);
-    if assigned(event^.packet) then begin
+    if not assigned(event^.packet) then begin
      continue;
     end;
     event^.type_:=ENET_EVENT_TYPE_RECEIVE;

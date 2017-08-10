@@ -25,6 +25,7 @@ procedure TServer.Execute;
 var address:TENetAddress;
     server,client:PENetHost;
     event:TENetEvent;
+    packet:PENetPacket;
 begin
  if ParamCount>0 then begin
   address.host:=ENET_HOST_ANY;
@@ -36,13 +37,16 @@ begin
  if assigned(server) then begin
   try
    client:=nil;
-   while (not Terminated) and (enet_host_service(server,@event,3000)>=0) do begin
+   while (not Terminated) and (enet_host_service(server,@event,1000)>=0) do begin
     case event.type_ of
      ENET_EVENT_TYPE_NONE:begin
-      writeln('Server: Nothing');
+      //writeln('Server: Nothing');
      end;
      ENET_EVENT_TYPE_CONNECT:begin
       writeln('Server: A new client connected');
+      packet:=enet_packet_create('Hello world!',ENET_PACKET_FLAG_RELIABLE);
+      enet_peer_send(event.peer,0,packet);
+      enet_host_flush(server);
      end;
      ENET_EVENT_TYPE_DISCONNECT:begin
       writeln('Server: A client disconnected');
@@ -82,10 +86,10 @@ begin
         (event.type_=ENET_EVENT_TYPE_CONNECT) then begin
       writeln('Connected');
       Disconnected:=false;
-      while (not Terminated) and (enet_host_service(client,@event,3000)>=0) do begin
+      while (not Terminated) and (enet_host_service(client,@event,1000)>=0) do begin
        case event.type_ of
         ENET_EVENT_TYPE_NONE:begin
-         writeln('Client: Nothing');
+         //writeln('Client: Nothing');
         end;
         ENET_EVENT_TYPE_CONNECT:begin
          writeln('Client: Connected');
@@ -96,6 +100,7 @@ begin
         end;
         ENET_EVENT_TYPE_RECEIVE:begin
          writeln('Client: A packet received');
+         writeln(copy(event.packet^.data,0,event.packet^.datalength));
          enet_packet_destroy(event.packet);
         end;
        end;
