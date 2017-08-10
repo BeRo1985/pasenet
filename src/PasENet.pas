@@ -1613,7 +1613,7 @@ function enet_initialize:longint;
 var versionRequested:word;
     vWSAData:TWSAData;
 begin
-   LibHandle:=0;
+ LibHandle:=0;
  versionRequested:=MAKEWORD(2,2);
  if WSAStartup(versionRequested,vWSAData)<>0 then begin
   result:=-1;
@@ -4789,7 +4789,7 @@ var header:PENetProtocolHeader;
     sessionID,commandNumber:byte;
     buffer:TENetBuffer;
 begin
- if (host^.receivedDataLength<SizeOf(longword)) and (PENetProtocolHeader(nil)^.sentTime<>0) then begin
+ if ENETptruint(host^.receivedDataLength)<{%H-}ENETptruint(pointer(@PENetProtocolHeader(nil)^.sentTime)) then begin
   result:=0;
   exit;
  end;
@@ -4801,7 +4801,7 @@ begin
  if (flags and ENET_PROTOCOL_HEADER_FLAG_SENT_TIME)<>0 then begin
   headerSize:=sizeof(TENetProtocolHeader);
  end else begin
-  headerSize:=sizeof(longword);
+  headerSize:={%H-}ENETptruint(pointer(@PENetProtocolHeader(nil)^.sentTime));
  end;
  if assigned(host^.checksum) then begin
   inc(headerSize,sizeof(longword));
@@ -4821,140 +4821,140 @@ begin
    result:=0;
    exit;
   end;
-  if (flags and ENET_PROTOCOL_HEADER_FLAG_COMPRESSED)<>0 then begin
-   if (not assigned(host^.compressor.context)) or not assigned(host^.compressor.decompress) then begin
-    result:=0;
-    exit;
-   end;
-   originalSize:=host^.compressor.decompress(host^.compressor.context,pointer(@pansichar(host^.receivedData)[headerSize]),longword(host^.receivedDataLength)-headerSize,@host^.packetData[1,headerSize],sizeof(host^.packetData[1])-headerSize);
-   if (originalSize<=0) or (originalSize>(sizeof(host^.packetData[1])-headerSize)) then begin
-    result:=0;
-    exit;
-   end;
-   move(header,host^.packetData[1],headerSize);
-   host^.receivedData:=@host^.packetData[1];
-   host^.receivedDataLength:=headerSize+originalSize;
+ end;
+ if (flags and ENET_PROTOCOL_HEADER_FLAG_COMPRESSED)<>0 then begin
+  if (not assigned(host^.compressor.context)) or not assigned(host^.compressor.decompress) then begin
+   result:=0;
+   exit;
   end;
-  if assigned(host^.checksum) then begin
-   checksum:=pointer(@host^.receivedData[headerSize-sizeof(longword)]);
-   desiredChecksum:=checksum^;
-   if assigned(peer) then begin
-    checksum^:=peer^.connectID;
-   end else begin
-    checksum^:=0;
-   end;
-   buffer.data:=host^.receivedData;
-   buffer.dataLength:=host^.receivedDataLength;
-   if host^.checksum(@buffer,1)<>desiredChecksum then begin
-    result:=0;
-    exit;
-   end;
+  originalSize:=host^.compressor.decompress(host^.compressor.context,pointer(@pansichar(host^.receivedData)[headerSize]),longword(host^.receivedDataLength)-headerSize,@host^.packetData[1,headerSize],sizeof(host^.packetData[1])-headerSize);
+  if (originalSize<=0) or (originalSize>(sizeof(host^.packetData[1])-headerSize)) then begin
+   result:=0;
+   exit;
   end;
+  move(header,host^.packetData[1],headerSize);
+  host^.receivedData:=@host^.packetData[1];
+  host^.receivedDataLength:=headerSize+originalSize;
+ end;
+ if assigned(host^.checksum) then begin
+  checksum:=pointer(@host^.receivedData[headerSize-sizeof(longword)]);
+  desiredChecksum:=checksum^;
   if assigned(peer) then begin
-   peer^.address:=host^.receivedAddress;
-   inc(peer^.incomingDataTotal,host^.receivedDataLength);
+   checksum^:=peer^.connectID;
+  end else begin
+   checksum^:=0;
   end;
-  currentData:=@host^.receivedData[headerSize];
-  while currentData<@host^.receivedData[host^.receivedDataLength] do begin
-   command:=PENetProtocol(currentData);
-   if PAnsiChar(@currentData[sizeof(TENetProtocolCommandHeader)])>PAnsiChar(@host^.receivedData[host^.receivedDataLength]) then begin
-    break;
-   end;
-   commandNumber:=command^.header.command and ENET_PROTOCOL_COMMAND_MASK;
-   if commandNumber>=ENET_PROTOCOL_COMMAND_COUNT then begin
-    break;
-   end;
-   commandSize:=commandSizes[commandNumber];
-   if (commandSize=0) or (PAnsiChar(@currentData[commandSize])>PAnsiChar(@host^.receivedData[host^.receivedDataLength])) then begin
-    break;
-   end;
-   inc(currentData,commandSize);
-   if (not assigned(peer)) and (commandNumber<>ENET_PROTOCOL_COMMAND_CONNECT) then begin
-    break;
-   end;
-   command^.header.reliableSequenceNumber:=ENET_NET_TO_HOST_16(command^.header.reliableSequenceNumber);
-   case commandNumber of
-    ENET_PROTOCOL_COMMAND_ACKNOWLEDGE:begin
-     if enet_protocol_handle_acknowledge(host,event,peer,command)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_CONNECT:begin
-     peer:=enet_protocol_handle_connect(host,header,command);
-     if not assigned(peer) then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_VERIFY_CONNECT:begin
-     if enet_protocol_handle_verify_connect(host,event,peer,command)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_DISCONNECT:begin
-     if enet_protocol_handle_disconnect(host,peer,command)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_PING:begin
-     if enet_protocol_handle_ping(host,peer,command)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_SEND_RELIABLE:begin
-     if enet_protocol_handle_send_reliable(host,peer,command,@currentData)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_SEND_UNRELIABLE:begin
-     if enet_protocol_handle_send_unreliable(host,peer,command,@currentData)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_SEND_UNSEQUENCED:begin
-     if enet_protocol_handle_send_unsequenced(host,peer,command,@currentData)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_SEND_FRAGMENT:begin
-     if enet_protocol_handle_send_fragment(host,peer,command,@currentData)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_BANDWIDTH_LIMIT:begin
-     if enet_protocol_handle_bandwidth_limit(host,peer,command)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_THROTTLE_CONFIGURE:begin
-     if enet_protocol_handle_throttle_configure(host,peer,command)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    ENET_PROTOCOL_COMMAND_SEND_UNRELIABLE_FRAGMENT:begin
-     if enet_protocol_handle_send_unreliable_fragment(host,peer,command,@currentData)<>0 then begin
-      goto commandError;
-     end;
-    end;
-    else begin
+  buffer.data:=host^.receivedData;
+  buffer.dataLength:=host^.receivedDataLength;
+  if host^.checksum(@buffer,1)<>desiredChecksum then begin
+   result:=0;
+   exit;
+  end;
+ end;
+ if assigned(peer) then begin
+  peer^.address:=host^.receivedAddress;
+  inc(peer^.incomingDataTotal,host^.receivedDataLength);
+ end;
+ currentData:=@host^.receivedData[headerSize];
+ while currentData<@host^.receivedData[host^.receivedDataLength] do begin
+  command:=PENetProtocol(currentData);
+  if PAnsiChar(@currentData[sizeof(TENetProtocolCommandHeader)])>PAnsiChar(@host^.receivedData[host^.receivedDataLength]) then begin
+   break;
+  end;
+  commandNumber:=command^.header.command and ENET_PROTOCOL_COMMAND_MASK;
+  if commandNumber>=ENET_PROTOCOL_COMMAND_COUNT then begin
+   break;
+  end;
+  commandSize:=commandSizes[commandNumber];
+  if (commandSize=0) or (PAnsiChar(@currentData[commandSize])>PAnsiChar(@host^.receivedData[host^.receivedDataLength])) then begin
+   break;
+  end;
+  inc(currentData,commandSize);
+  if (not assigned(peer)) and (commandNumber<>ENET_PROTOCOL_COMMAND_CONNECT) then begin
+   break;
+  end;
+  command^.header.reliableSequenceNumber:=ENET_NET_TO_HOST_16(command^.header.reliableSequenceNumber);
+  case commandNumber of
+   ENET_PROTOCOL_COMMAND_ACKNOWLEDGE:begin
+    if enet_protocol_handle_acknowledge(host,event,peer,command)<>0 then begin
      goto commandError;
     end;
    end;
-   if assigned(peer) and ((command^.header.command and ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE)<>0) then begin
-    if (flags and ENET_PROTOCOL_HEADER_FLAG_SENT_TIME)=0 then begin
-     break;
+   ENET_PROTOCOL_COMMAND_CONNECT:begin
+    peer:=enet_protocol_handle_connect(host,header,command);
+    if not assigned(peer) then begin
+     goto commandError;
     end;
-    sentTime:=ENET_NET_TO_HOST_16(header^.sentTime);
-    case peer^.state of
-     ENET_PEER_STATE_DISCONNECTING,ENET_PEER_STATE_ACKNOWLEDGING_CONNECT,ENET_PEER_STATE_DISCONNECTED,ENET_PEER_STATE_ZOMBIE:begin
-     end;
-     ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT:begin
-      if (command^.header.command and ENET_PROTOCOL_COMMAND_MASK)=ENET_PROTOCOL_COMMAND_DISCONNECT then begin
-       enet_peer_queue_acknowledgement(peer,command,sentTime);
-      end;
-     end;
-     else begin
+   end;
+   ENET_PROTOCOL_COMMAND_VERIFY_CONNECT:begin
+    if enet_protocol_handle_verify_connect(host,event,peer,command)<>0 then begin
+     goto commandError;
+    end;
+   end;
+   ENET_PROTOCOL_COMMAND_DISCONNECT:begin
+    if enet_protocol_handle_disconnect(host,peer,command)<>0 then begin
+     goto commandError;
+    end;
+   end;
+   ENET_PROTOCOL_COMMAND_PING:begin
+    if enet_protocol_handle_ping(host,peer,command)<>0 then begin
+     goto commandError;
+    end;
+   end;
+   ENET_PROTOCOL_COMMAND_SEND_RELIABLE:begin
+    if enet_protocol_handle_send_reliable(host,peer,command,@currentData)<>0 then begin
+     goto commandError;
+    end;
+   end;
+   ENET_PROTOCOL_COMMAND_SEND_UNRELIABLE:begin
+    if enet_protocol_handle_send_unreliable(host,peer,command,@currentData)<>0 then begin
+     goto commandError;
+    end;
+   end;
+   ENET_PROTOCOL_COMMAND_SEND_UNSEQUENCED:begin
+    if enet_protocol_handle_send_unsequenced(host,peer,command,@currentData)<>0 then begin
+     goto commandError;
+    end;
+   end;
+   ENET_PROTOCOL_COMMAND_SEND_FRAGMENT:begin
+    if enet_protocol_handle_send_fragment(host,peer,command,@currentData)<>0 then begin
+     goto commandError;
+    end;
+   end;
+   ENET_PROTOCOL_COMMAND_BANDWIDTH_LIMIT:begin
+    if enet_protocol_handle_bandwidth_limit(host,peer,command)<>0 then begin
+     goto commandError;
+    end;
+   end;
+   ENET_PROTOCOL_COMMAND_THROTTLE_CONFIGURE:begin
+    if enet_protocol_handle_throttle_configure(host,peer,command)<>0 then begin
+     goto commandError;
+    end;
+   end;
+   ENET_PROTOCOL_COMMAND_SEND_UNRELIABLE_FRAGMENT:begin
+    if enet_protocol_handle_send_unreliable_fragment(host,peer,command,@currentData)<>0 then begin
+     goto commandError;
+    end;
+   end;
+   else begin
+    goto commandError;
+   end;
+  end;
+  if assigned(peer) and ((command^.header.command and ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE)<>0) then begin
+   if (flags and ENET_PROTOCOL_HEADER_FLAG_SENT_TIME)=0 then begin
+    break;
+   end;
+   sentTime:=ENET_NET_TO_HOST_16(header^.sentTime);
+   case peer^.state of
+    ENET_PEER_STATE_DISCONNECTING,ENET_PEER_STATE_ACKNOWLEDGING_CONNECT,ENET_PEER_STATE_DISCONNECTED,ENET_PEER_STATE_ZOMBIE:begin
+    end;
+    ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT:begin
+     if (command^.header.command and ENET_PROTOCOL_COMMAND_MASK)=ENET_PROTOCOL_COMMAND_DISCONNECT then begin
       enet_peer_queue_acknowledgement(peer,command,sentTime);
      end;
+    end;
+    else begin
+     enet_peer_queue_acknowledgement(peer,command,sentTime);
     end;
    end;
   end;
@@ -5374,7 +5374,7 @@ begin
     header^.sentTime:=ENET_HOST_TO_NET_16(host^.serviceTime and $FFFF);
     host^.buffers[0].dataLength:=sizeof(TENetProtocolHeader);
    end else begin
-    host^.buffers[0].dataLength:=PENetProtocolHeader(nil)^.sentTime;
+    host^.buffers[0].dataLength:={%H-}ENETptruint(Pointer(@PENetProtocolHeader(nil)^.sentTime));
    end;
    shouldCompress:=0;
    if assigned(host^.compressor.context) and assigned(host^.compressor.compress) then begin
