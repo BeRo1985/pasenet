@@ -366,6 +366,9 @@ type PPENetInt8=^PENetInt8;
      PENetUTF16String=^TENetUTF16String;
      TENetUTF16String={$if declared(UnicodeString)}UnicodeString{$else}WideString{$ifend};
 
+     PENetUInt16Array=^TENetUInt16Array;
+     TENetUInt16Array=array[0..65535] of TENetUInt16;
+
 const ENET_VERSION_MAJOR=1;
       ENET_VERSION_MINOR=3;
       ENET_VERSION_PATCH=13;
@@ -911,6 +914,10 @@ type PENetPacket=^TENetPacket;
       recalculateBandwidthLimits:TENetInt32;
       peers:PENetPeers;
       peerCount:TENetInt32;
+      busyPeersList:PENetUInt16Array;
+      idlePeersList:PENetUInt16Array;
+      busyPeers:TENetSizeInt;
+      idlePeers:TENetSizeInt;
       channelLimit:TENetUInt32;
       serviceTime:TENetUInt32;
       dispatchQueue:TENetList;
@@ -1080,7 +1087,7 @@ function enet_protocol_handle_acknowledge(host:PENetHost;event:PENetEvent;peer:P
 function enet_protocol_handle_verify_connect(host:PENetHost;event:PENetEvent;peer:PENetPeer;command:PENetProtocol):TENetInt32;
 function enet_protocol_handle_incoming_commands(host:PENetHost;event:PENetEvent):TENetInt32;
 procedure enet_protocol_send_acknowledgements(host:PENetHost;peer:PENetPeer);
-function enet_protocol_receive_incoming_commands(host:PENetHost;event:PENetEvent;family:TENetAddressFamily):TENetInt32;
+function enet_protocol_receive_incoming_commands(host:PENetHost;event:PENetEvent;family:TENetAddressFamily;timeout:TENetUInt32):TENetInt32;
 procedure enet_protocol_send_unreliable_outgoing_commands(host:PENetHost;peer:PENetPeer);
 function enet_protocol_check_timeouts(host:PENetHost;peer:PENetPeer;event:PENetEvent):TENetInt32;
 function enet_protocol_send_reliable_outgoing_commands(host:PENetHost;peer:PENetPeer):TENetInt32;
@@ -1523,9 +1530,9 @@ end;
 function enet_socket_create(type_:TENetSocketType;family:TENetAddressFamily):TENetSocket;
 begin
  if type_=ENET_SOCKET_TYPE_DATAGRAM then begin
-  result:=fpsocket(enet_af(family),SOCK_DGRAM,0);
+  result:=fpsocket(enet_af(family),SOCK_DGRAM or SOCK_CLOEXEC,0);
  end else begin
-  result:=fpsocket(enet_af(family),SOCK_STREAM,0);
+  result:=fpsocket(enet_af(family),SOCK_STREAM or SOCK_CLOEXEC,0);
  end;
 end;
 
@@ -3270,7 +3277,19 @@ begin
 end;
 
 procedure enet_peer_reset(peer:PENetPeer);
+var Index:TENetInt32;
+    host:PENetHost;
 begin
+ host:=peer^.host;
+ for Index:=0 to host^.busyPeers-1 do begin
+  if host^.busyPeersList^[Index]=peer^.incomingPeerID then begin
+   host^.idlePeersList^[host^.idlePeers]:=peer^.incomingPeerID;
+   host^.busyPeersList^[Index]:=host^.busyPeersList^[host^.busyPeers];
+   dec(host^.busyPeers);
+   inc(host^.idlePeers);
+   break;
+  end;
+ end;
  enet_peer_on_disconnect(peer);
  peer^.outgoingPeerID:=ENET_PROTOCOL_MAXIMUM_PEER_ID;
  peer^.connectID:=0; 
@@ -3801,7 +3820,7 @@ begin
   enet_socket_destroy(result);
   result:=ENET_SOCKET_NULL;
   exit;
- end;                
+ end;
  enet_socket_set_option(result,ENET_SOCKOPT_NONBLOCK,1);
  enet_socket_set_option(result,ENET_SOCKOPT_BROADCAST,1);
  enet_socket_set_option(result,ENET_SOCKOPT_RCVBUF,ENET_HOST_RECEIVE_BUFFER_SIZE);
@@ -3811,7 +3830,7 @@ end;
 function enet_host_create(address:PENetAddress;peerCount,channelLimit,incomingBandwidth,outgoingBandwidth:TENetUInt32):PENetHost;
 var host:PENetHost;
     currentPeer:PENetPeer;
-    family:TENetInt32;
+    family,Value:TENetInt32;
 begin
  if peerCount>ENET_PROTOCOL_MAXIMUM_PEER_ID then begin
   result:=nil;
@@ -3830,6 +3849,10 @@ begin
   exit;
  end;
  FillChar(host^.peers^,peerCount*sizeof(TENetPeer),AnsiChar(#0));
+ GetMem(host^.busyPeersList,peerCount*sizeof(TENetUInt16));
+ GetMem(host^.idlePeersList,peerCount*sizeof(TENetUInt16));
+ FillChar(host^.busyPeersList^,peerCount*sizeof(TENetUInt16),AnsiChar(#0));
+ FillChar(host^.idlePeersList^,peerCount*sizeof(TENetUInt16),AnsiChar(#0));
  if (not assigned(address)) or enet_compare_address(address^.host,ENET_HOST_ANY) then begin
   family:=ENET_IPV4 or ENET_IPV6;
  end else begin
@@ -3846,6 +3869,8 @@ begin
   host^.socket6:=ENET_SOCKET_NULL;
  end;
  if (host^.socket4=ENET_SOCKET_NULL) and (host^.socket6=ENET_SOCKET_NULL)  then begin
+  FreeMem(host^.busyPeersList);
+  FreeMem(host^.idlePeersList);
   FreeMem(host^.peers);
   FreeMem(host);
   result:=nil;
@@ -3882,6 +3907,8 @@ begin
  host^.recalculateBandwidthLimits:=0;
  host^.mtu:=ENET_HOST_DEFAULT_MTU;
  host^.peerCount:=peerCount;
+ host^.busyPeers:=0;
+ host^.idlePeers:=peerCount;
  host^.commandCount:=0;
  host^.bufferCount:=0;
  host^.checksum:=nil;
@@ -3911,6 +3938,7 @@ begin
   currentPeer^.outgoingSessionID:=$ff;
   currentPeer^.incomingSessionID:=$ff;
   currentPeer^.data:=nil;
+  host^.idlePeersList^[currentPeer^.incomingPeerID]:=currentPeer^.incomingPeerID;
   enet_list_clear(@currentPeer^.acknowledgements);
   enet_list_clear(@currentPeer^.sentReliableCommands);
   enet_list_clear(@currentPeer^.sentUnreliableCommands);
@@ -3943,6 +3971,8 @@ begin
  if assigned(host^.compressor.context) and assigned(host^.compressor.destroy) then begin
   host^.compressor.destroy(host^.compressor.context);
  end;
+ FreeMem(host^.busyPeersList);
+ FreeMem(host^.idlePeersList);
  FreeMem(host^.peers);
  FreeMem(host);
 end;
@@ -3957,22 +3987,19 @@ begin
  end else if channelCount>ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT then begin
   channelCount:=ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT;
  end;
- currentPeer:=@host^.peers[0];
- while TENetPtrUInt(pointer(currentPeer))<TENetPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
-  if currentPeer^.state=ENET_PEER_STATE_DISCONNECTED then begin
-   break;
-  end;
-  inc(currentPeer);
- end;
- if TENetPtrUInt(pointer(currentPeer))>=TENetPtrUInt(pointer(@host^.peers[host^.peerCount])) then begin
+ if host^.idlePeers=0 then begin
   result:=nil;
   exit;
  end;
+ currentPeer:=@host^.peers[host^.idlePeersList^[host^.idlePeers-1]];
  GetMem(currentPeer^.channels,channelCount*sizeof(TENetChannel));
  if not assigned(currentPeer^.channels) then begin
   result:=nil;
   exit;
  end;
+ host^.busyPeersList^[host^.busyPeers]:=currentPeer^.incomingPeerID;
+ inc(host^.busyPeers);
+ dec(host^.idlePeers);
  currentPeer^.channelCount:=channelCount;
  currentPeer^.state:=ENET_PEER_STATE_CONNECTING;
  currentPeer^.address:=address^;
@@ -4020,16 +4047,14 @@ begin
 end;
 
 procedure enet_host_broadcast(host:PENetHost;channelID:TENetUInt8;packet:PENetPacket);
-var currentPeer:PENetPeer;
+var Index:TENetInt32;
+    currentPeer:PENetPeer;
 begin
- currentPeer:=@host^.peers[0];
- while TENetPtrUInt(pointer(currentPeer))<TENetPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
-  if currentPeer^.state<>ENET_PEER_STATE_CONNECTED then begin
-   inc(currentPeer);
-   continue;
+ for Index:=0 to host^.busyPeers-1 do begin
+  currentPeer:=@host^.peers[host^.busyPeersList^[Index]];
+  if currentPeer^.state=ENET_PEER_STATE_CONNECTED then begin
+   enet_peer_send(currentPeer,channelID,packet);
   end;
-  enet_peer_send(currentPeer,channelID,packet);
-  inc(currentPeer);
  end;
  if packet^.referenceCount=0 then begin
   enet_packet_destroy(packet);
@@ -4068,7 +4093,7 @@ end;
 procedure enet_host_bandwidth_throttle(host:PENetHost);
 var timeCurrent,elapsedTime,dataTotal,peersRemaining,bandwidth,throttle,bandwidthLimit,
     peerBandwidth:TENetUInt32;
-    needsAdjustment:TENetInt32;
+    needsAdjustment,index:TENetInt32;
     peer:PENetPeer;
     command:TENetProtocol;
 begin
@@ -4096,14 +4121,11 @@ begin
  if host^.outgoingBandwidth<>0 then begin
   dataTotal:=0;
   bandwidth:=(host^.outgoingBandwidth*elapsedTime) div 1000;
-  peer:=@host^.peers[0];
-  while TENetPtrUInt(pointer(peer))<TENetPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
-   if (peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER) then begin
-    inc(peer);
-    continue;
+  for Index:=0 to host^.busyPeers-1 do begin
+   peer:=@host^.peers[host^.busyPeersList^[Index]];
+   if not ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) then begin
+    inc(dataTotal,peer^.outgoingDataTotal);
    end;
-   inc(dataTotal,peer^.outgoingDataTotal);
-   inc(peer);
   end;
  end;
  while (peersRemaining>0) and (needsAdjustment<>0) do begin
@@ -4113,33 +4135,30 @@ begin
   end else begin
    throttle:=(bandwidth*ENET_PEER_PACKET_THROTTLE_SCALE) div dataTotal;
   end;
-  peer:=@host^.peers[0];
-  while TENetPtrUInt(pointer(peer))<TENetPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
-   if ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) or
-      (peer^.incomingBandwidth=0) or (peer^.outgoingBandwidthThrottleEpoch=timeCurrent) then begin
-    inc(peer);
-    continue;
-   end;
-   peerBandwidth:=(peer^.incomingBandwidth*elapsedTime) div 1000;
-   if ((throttle*peer^.outgoingDataTotal) div ENET_PEER_PACKET_THROTTLE_SCALE)<=peerBandwidth then begin
-    inc(peer);
-    continue;
-   end;
-   peer^.packetThrottleLimit:=(peerBandwidth*ENET_PEER_PACKET_THROTTLE_SCALE) div peer^.outgoingDataTotal;
-   if peer^.packetThrottleLimit=0 then begin
-    peer^.packetThrottleLimit:=1;
-   end;
-   if peer^.packetThrottle>peer^.packetThrottleLimit then begin
-    peer^.packetThrottle:=peer^.packetThrottleLimit;
-   end;
-   peer^.outgoingBandwidthThrottleEpoch:=timeCurrent;
-   peer^.incomingDataTotal:=0;
-   peer^.outgoingDataTotal:=0;
-   needsAdjustment:=1;
-   dec(peersRemaining);
-   dec(bandwidth,peerBandwidth);
-   dec(dataTotal,peerBandwidth);
-   inc(peer);
+  for Index:=0 to host^.busyPeers-1 do begin
+   peer:=@host^.peers[host^.busyPeersList^[Index]];
+   if not (((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) or
+           (peer^.incomingBandwidth=0) or (peer^.outgoingBandwidthThrottleEpoch=timeCurrent)) then begin
+    peerBandwidth:=(peer^.incomingBandwidth*elapsedTime) div 1000;
+    if ((throttle*peer^.outgoingDataTotal) div ENET_PEER_PACKET_THROTTLE_SCALE)<=peerBandwidth then begin
+     inc(peer);
+     continue;
+    end;
+    peer^.packetThrottleLimit:=(peerBandwidth*ENET_PEER_PACKET_THROTTLE_SCALE) div peer^.outgoingDataTotal;
+    if peer^.packetThrottleLimit=0 then begin
+     peer^.packetThrottleLimit:=1;
+    end;
+    if peer^.packetThrottle>peer^.packetThrottleLimit then begin
+     peer^.packetThrottle:=peer^.packetThrottleLimit;
+    end;
+    peer^.outgoingBandwidthThrottleEpoch:=timeCurrent;
+    peer^.incomingDataTotal:=0;
+    peer^.outgoingDataTotal:=0;
+    needsAdjustment:=1;
+    dec(peersRemaining);
+    dec(bandwidth,peerBandwidth);
+    dec(dataTotal,peerBandwidth);
+   end;  
   end;
  end;
  if peersRemaining>0 then begin
@@ -4148,20 +4167,17 @@ begin
   end else begin
    throttle:=(bandwidth*ENET_PEER_PACKET_THROTTLE_SCALE) div dataTotal;
   end;
-  peer:=@host^.peers[0];
-  while TENetPtrUInt(pointer(peer))<TENetPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
-   if ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) or
-      (peer^.outgoingBandwidthThrottleEpoch=timeCurrent) then begin
-    inc(peer);
-    continue;
+  for Index:=0 to host^.busyPeers-1 do begin
+   peer:=@host^.peers[host^.busyPeersList^[Index]];
+   if not (((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) or
+           (peer^.outgoingBandwidthThrottleEpoch=timeCurrent)) then begin
+    peer^.packetThrottleLimit:=throttle;
+    if peer^.packetThrottle>peer^.packetThrottleLimit then begin
+     peer^.packetThrottle:=peer^.packetThrottleLimit;
+    end;
+    peer^.incomingDataTotal:=0;
+    peer^.outgoingDataTotal:=0;
    end;
-   peer^.packetThrottleLimit:=throttle;
-   if peer^.packetThrottle>peer^.packetThrottleLimit then begin
-    peer^.packetThrottle:=peer^.packetThrottleLimit;
-   end;
-   peer^.incomingDataTotal:=0;
-   peer^.outgoingDataTotal:=0;
-   inc(peer);
   end;
  end;
  if host^.recalculateBandwidthLimits<>0 then begin
@@ -4175,42 +4191,35 @@ begin
    while (peersRemaining>0) and (needsAdjustment<>0) do begin
     needsAdjustment:=0;
     bandwidthLimit:=bandwidth div peersRemaining;
-    peer:=@host^.peers[0];
-    while TENetPtrUInt(pointer(peer))<TENetPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
-     if ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) or (peer^.incomingBandwidthThrottleEpoch=timeCurrent) then begin
-      inc(peer);
-      continue;
+    for Index:=0 to host^.busyPeers-1 do begin
+     peer:=@host^.peers[host^.busyPeersList^[Index]];
+     if not (((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) or (peer^.incomingBandwidthThrottleEpoch=timeCurrent)) then begin
+      if not ((peer^.outgoingBandwidth>0) and (peer^.outgoingBandwidth>=bandwidthLimit)) then begin
+       peer^.incomingBandwidthThrottleEpoch:=timeCurrent;
+       needsAdjustment:=1;
+       dec(peersRemaining);
+       inc(bandwidth,peer^.outgoingBandwidth);
+      end;
      end;
-     if (peer^.outgoingBandwidth>0) and (peer^.outgoingBandwidth>=bandwidthLimit) then begin
-      inc(peer);
-      continue;
-     end;
-     peer^.incomingBandwidthThrottleEpoch:=timeCurrent;
-     needsAdjustment:=1;
-     dec(peersRemaining);
-     inc(bandwidth,peer^.outgoingBandwidth);
-     inc(peer);
     end;
    end;
   end;
-  peer:=@host^.peers[0];
-  while TENetPtrUInt(pointer(peer))<TENetPtrUInt(pointer(@host^.peers[host^.peerCount])) do begin
-   if (peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER) then begin
-    inc(peer);
-    continue;
+  for Index:=0 to host^.busyPeers-1 do begin
+   peer:=@host^.peers[host^.busyPeersList^[Index]];
+   if not ((peer^.state<>ENET_PEER_STATE_CONNECTED) and (peer^.state<>ENET_PEER_STATE_DISCONNECT_LATER)) then begin
+    command.header.command:=ENET_PROTOCOL_COMMAND_BANDWIDTH_LIMIT or ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
+    command.header.channelID:=$ff;
+    command.bandwidthLimit.outgoingBandwidth:=ENET_HOST_TO_NET_32 (host^.outgoingBandwidth);
+    if peer^.incomingBandwidthThrottleEpoch=timeCurrent then begin
+     command.bandwidthLimit.incomingBandwidth:=ENET_HOST_TO_NET_32(peer^.outgoingBandwidth);
+    end else begin
+     command.bandwidthLimit.incomingBandwidth:=ENET_HOST_TO_NET_32(bandwidthLimit);
+    end;
+    enet_peer_queue_outgoing_command(peer,@command,nil,0,0);
    end;
-   command.header.command:=ENET_PROTOCOL_COMMAND_BANDWIDTH_LIMIT or ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
-   command.header.channelID:=$ff;
-   command.bandwidthLimit.outgoingBandwidth:=ENET_HOST_TO_NET_32 (host^.outgoingBandwidth);
-   if peer^.incomingBandwidthThrottleEpoch=timeCurrent then begin
-    command.bandwidthLimit.incomingBandwidth:=ENET_HOST_TO_NET_32(peer^.outgoingBandwidth);
-   end else begin
-    command.bandwidthLimit.incomingBandwidth:=ENET_HOST_TO_NET_32(bandwidthLimit);
-   end;
-   enet_peer_queue_outgoing_command(peer,@command,nil,0,0);
-   inc(peer);
   end;
  end;
+ 
 end;
 
 const commandSizes:array[0..ENET_PROTOCOL_COMMAND_COUNT-1] of TENetInt32=
@@ -4432,7 +4441,7 @@ var incomingSessionID,outgoingSessionID:TENetUInt8;
     channel:PENetChannel;
     currentPeer:PENetPeer;
     verifyCommand:TENetProtocol;
-    i:TENetInt32;
+    Index:TENetInt32;
 begin
  result:=nil;
  channelCount:=ENET_NET_TO_HOST_32(command^.connect.channelCount);
@@ -4441,29 +4450,31 @@ begin
   result:=nil;
   exit;
  end;
- for i:=0 to host^.peerCount-1 do begin
-  currentPeer:=@host^.peers^[i];
-  if currentPeer^.state=ENET_PEER_STATE_DISCONNECTED then begin
-   if not assigned(result) then begin
-    result:=currentPeer;
-   end;
-  end else if (currentPeer^.state<>ENET_PEER_STATE_CONNECTING) and
-              (currentPeer^.address.host.addr[0]=host^.receivedAddress.host.addr[0]) and
-              (currentPeer^.address.host.addr[1]=host^.receivedAddress.host.addr[1]) and
-              (currentPeer^.address.host.addr[2]=host^.receivedAddress.host.addr[2]) and
-              (currentPeer^.address.host.addr[3]=host^.receivedAddress.host.addr[3]) and
-              (currentPeer^.address.host.addr[4]=host^.receivedAddress.host.addr[4]) and
-              (currentPeer^.address.host.addr[5]=host^.receivedAddress.host.addr[5]) and
-              (currentPeer^.address.host.addr[6]=host^.receivedAddress.host.addr[6]) and
-              (currentPeer^.address.host.addr[7]=host^.receivedAddress.host.addr[7]) and
-              (currentPeer^.address.host.addr[8]=host^.receivedAddress.host.addr[8]) and
-              (currentPeer^.address.host.addr[9]=host^.receivedAddress.host.addr[9]) and
-              (currentPeer^.address.host.addr[10]=host^.receivedAddress.host.addr[10]) and
-              (currentPeer^.address.host.addr[11]=host^.receivedAddress.host.addr[11]) and
-              (currentPeer^.address.host.addr[12]=host^.receivedAddress.host.addr[12]) and
-              (currentPeer^.address.host.addr[13]=host^.receivedAddress.host.addr[13]) and
-              (currentPeer^.address.host.addr[14]=host^.receivedAddress.host.addr[14]) and
-              (currentPeer^.address.host.addr[15]=host^.receivedAddress.host.addr[15]) then begin
+
+ if host^.idlePeers=0 then begin
+  result:=nil;
+  exit;
+ end;
+
+ for Index:=0 to host^.busyPeers-1 do begin
+  currentPeer:=@host^.peers^[host^.busyPeersList[Index]];
+  if (currentPeer^.state<>ENET_PEER_STATE_CONNECTING) and
+     (currentPeer^.address.host.addr[0]=host^.receivedAddress.host.addr[0]) and
+     (currentPeer^.address.host.addr[1]=host^.receivedAddress.host.addr[1]) and
+     (currentPeer^.address.host.addr[2]=host^.receivedAddress.host.addr[2]) and
+     (currentPeer^.address.host.addr[3]=host^.receivedAddress.host.addr[3]) and
+     (currentPeer^.address.host.addr[4]=host^.receivedAddress.host.addr[4]) and
+     (currentPeer^.address.host.addr[5]=host^.receivedAddress.host.addr[5]) and
+     (currentPeer^.address.host.addr[6]=host^.receivedAddress.host.addr[6]) and
+     (currentPeer^.address.host.addr[7]=host^.receivedAddress.host.addr[7]) and
+     (currentPeer^.address.host.addr[8]=host^.receivedAddress.host.addr[8]) and
+     (currentPeer^.address.host.addr[9]=host^.receivedAddress.host.addr[9]) and
+     (currentPeer^.address.host.addr[10]=host^.receivedAddress.host.addr[10]) and
+     (currentPeer^.address.host.addr[11]=host^.receivedAddress.host.addr[11]) and
+     (currentPeer^.address.host.addr[12]=host^.receivedAddress.host.addr[12]) and
+     (currentPeer^.address.host.addr[13]=host^.receivedAddress.host.addr[13]) and
+     (currentPeer^.address.host.addr[14]=host^.receivedAddress.host.addr[14]) and
+     (currentPeer^.address.host.addr[15]=host^.receivedAddress.host.addr[15]) then begin
    if (currentPeer^.address.port=host^.receivedAddress.port) and
       (currentPeer^.connectID=command^.connect.connectID) then begin
     result:=nil;
@@ -4472,6 +4483,8 @@ begin
    inc(duplicatePeers);
   end;
  end;
+ currentPeer:=@host^.peers^[host^.idlePeersList[host^.idlePeers-1]];
+ result:=currentPeer;
 
  if (not assigned(result)) or (duplicatePeers>=host^.duplicatePeers) then begin
   result:=nil;
@@ -4498,7 +4511,7 @@ begin
  result^.packetThrottleInterval:=ENET_NET_TO_HOST_32(command^.connect.packetThrottleInterval);
  result^.packetThrottleAcceleration:=ENET_NET_TO_HOST_32(command^.connect.packetThrottleAcceleration);
  result^.packetThrottleDeceleration:=ENET_NET_TO_HOST_32(command^.connect.packetThrottleDeceleration);
- result^.eventData:=ENET_NET_TO_HOST_32 (command^.connect.data);
+ result^.eventData:=ENET_NET_TO_HOST_32(command^.connect.data);
 
  if command^.connect.incomingSessionID=$ff then begin
   incomingSessionID:=result^.outgoingSessionID;
@@ -4522,8 +4535,8 @@ begin
  end;
  result^.incomingSessionID:=outgoingSessionID;
 
- for i:=0 to channelCount-1 do begin
-  channel:=@result^.channels^[i];
+ for Index:=0 to channelCount-1 do begin
+  channel:=@result^.channels^[Index];
   channel^.outgoingReliableSequenceNumber:=0;
   channel^.outgoingUnreliableSequenceNumber:=0;
   channel^.incomingReliableSequenceNumber:=0;
@@ -4588,6 +4601,10 @@ begin
  verifyCommand.verifyConnect.packetThrottleAcceleration:=ENET_HOST_TO_NET_32(result^.packetThrottleAcceleration);
  verifyCommand.verifyConnect.packetThrottleDeceleration:=ENET_HOST_TO_NET_32(result^.packetThrottleDeceleration);
  verifyCommand.verifyConnect.connectID:=result^.connectID;
+
+ host^.busyPeersList^[host^.busyPeers]:=currentPeer^.incomingPeerID;
+ inc(host^.busyPeers);
+ dec(host^.idlePeers);
 
  enet_peer_queue_outgoing_command(result,@verifyCommand,nil,0,0);
 
@@ -5245,13 +5262,20 @@ commandError:
  end;
 end;
 
-function enet_protocol_receive_incoming_commands(host:PENetHost;event:PENetEvent;family:TENetAddressFamily):TENetInt32;
+function enet_protocol_receive_incoming_commands(host:PENetHost;event:PENetEvent;family:TENetAddressFamily;timeout:TENetUInt32):TENetInt32;
 var packets,receivedLength:TENetInt32;
     buffer:TENetBuffer;
+    peer:PENetPeer;
 begin
- for packets:=0 to 255 do begin
+ packets:=0;
+ repeat
+  inc(Packets);
+  if ((Packets and 1023)=0) and (enet_time_get>=Timeout) then begin
+   result:=0;
+   exit;
+  end;
   buffer.data:=@host^.packetData[0];
-  buffer.dataLength:=sizeof(host^.packetData[0]);
+  buffer.dataLength:=host^.mtu;
   if family=ENET_IPV4 then begin
    receivedLength:=enet_socket_receive(host^.socket4,@host^.receivedAddress,@buffer,1,family);
   end else begin
@@ -5298,7 +5322,7 @@ begin
     exit;
    end;
   end;
- end;
+ until false;
  result:=-1;
 end;
 
@@ -5553,7 +5577,7 @@ function enet_protocol_send_outgoing_commands(host:PENetHost;event:PENetEvent;ch
 var headerData:array[0..(sizeof(TENetProtocolHeader)+sizeof(TENetUInt32))-1] of TENetUInt8;
     header:PENetProtocolHeader;
     currentPeer:PENetPeer;
-    sentLength:TENetInt32;
+    sentLength,Index:TENetInt32;
     shouldCompress,packetLoss,originalSize,compressedSize:TENetUInt32;
     family:TENetAddressFamily;
     socket:TENetSocket;
@@ -5564,10 +5588,11 @@ begin
  host^.continueSending:=1;
  while host^.continueSending<>0 do begin
   host^.continueSending:=0;
-  currentPeer:=@host^.peers[0];
-  while TENetPtrUInt(pointer(currentPeer))<TENetPtrUInt(pointer(@host^.peers [host^.peerCount])) do begin
+  Index:=0;
+  while Index<host^.busyPeers do begin
+   currentPeer:=@host^.peers[host^.busyPeersList^[Index]];
    if currentPeer^.state in [ENET_PEER_STATE_DISCONNECTED,ENET_PEER_STATE_ZOMBIE] then begin
-    inc(currentPeer);
+    inc(Index);
     continue;
    end;
    host^.headerFlags:=0;
@@ -5585,7 +5610,7 @@ begin
      result:=1;
      exit;
     end else begin
-     inc(currentPeer);
+     inc(Index);
      continue;
     end;
    end;
@@ -5601,7 +5626,7 @@ begin
     enet_protocol_send_unreliable_outgoing_commands(host,currentPeer);
    end;
    if host^.commandCount=0 then begin
-    inc(currentPeer);
+    inc(Index);
     continue;
    end;
    if currentPeer^.packetLossEpoch=0 then begin
@@ -5704,7 +5729,7 @@ begin
    end;
    inc(host^.totalSentData,sentLength);
    inc(host^.totalSentPackets);
-   inc(currentPeer);
+   inc(Index);
   end;
  end;
  result:=0;
@@ -5769,7 +5794,7 @@ begin
    end;
   end;
   if host^.socket4<>ENET_SOCKET_NULL then begin
-   case enet_protocol_receive_incoming_commands(host,event,ENET_IPV4) of
+   case enet_protocol_receive_incoming_commands(host,event,ENET_IPV4,timeout) of
     1:begin
      result:=1;
      exit;
@@ -5784,7 +5809,7 @@ begin
    end;
   end;
   if host^.socket6<>ENET_SOCKET_NULL then begin
-   case enet_protocol_receive_incoming_commands(host,event,ENET_IPV6) of
+   case enet_protocol_receive_incoming_commands(host,event,ENET_IPV6,timeout) of
     1:begin
      result:=1;
      exit;
