@@ -1107,9 +1107,6 @@ function enet_host_service(host:PENetHost;event:PENetEvent;timeout:TENetUInt32):
 
 implementation
 
-const IPPROTO_IPV6=41;
-      IPV6_V6ONLY=26;
-
 function enet_list_begin(list:pointer):pointer;
 begin
  result:=PENetList(list)^.Sentinel.Next;
@@ -1346,6 +1343,8 @@ const timeBase:TENetUInt32=0;
 
 {$ifdef unix}
 const SOCKET_ERROR=-1;
+
+      SOCK_CLOEXEC=$02000000;
 
 type PSockaddrStorage=^TSockaddrStorage;
      TSockaddrStorage=record
@@ -1627,7 +1626,7 @@ begin
 end;
 
 function enet_socket_get_option(socket:TENetSocket;option:TENetSocketOption;var value:TENetInt32):TENetInt32;
-var nonBlocking:TENetUInt32;
+var {nonBlocking:TENetUInt32;}
     SockLen:socklen_t;
 begin
  result:=SOCKET_ERROR;
@@ -1851,6 +1850,9 @@ const AF_UNSPEC=0;
       AF_MAX=24;
 
       NI_NUMERICHOST=$2;
+
+      IPPROTO_IPV6=41;
+      IPV6_V6ONLY=26;
 
 type TInAddr=packed record
       case TENetInt32 of
@@ -2584,7 +2586,7 @@ begin
  count_:=minimum;
  if context^.symbols=0 then begin
   ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-  context^.symbols:=(TENetPtrInt(symbol_)-TENetPtrInt(context)) div sizeof(TENetSymbol);
+  context^.symbols:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol_)-TENetPtrUInt(context))) div sizeof(TENetSymbol);
  end else begin
   node:=@PENetSymbols(pointer(context))^[context^.symbols];
   while true do begin
@@ -2595,7 +2597,7 @@ begin
      continue;
     end;
     ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-    node^.left:=(TENetPtrInt(symbol_)-TENetPtrInt(node)) div sizeof(TENetSymbol);
+    node^.left:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol_)-TENetPtrUInt(node))) div sizeof(TENetSymbol);
    end else if value_>node^.value then begin
     inc(under_,node^.under);
     if node^.right<>0 then begin
@@ -2603,7 +2605,7 @@ begin
      continue;
     end;
     ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-    node^.right:=(TENetPtrInt(symbol_)-TENetPtrInt(node)) div sizeof(TENetSymbol);
+    node^.right:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol_)-TENetPtrUInt(node))) div sizeof(TENetSymbol);
    end else begin
     inc(count_,node^.count);
     inc(under_,node^.under-node^.count);
@@ -2636,6 +2638,7 @@ begin
  predicted:=0;
  order:=0;
  nextSymbol:=0;
+ root:=nil;
 
  if (not assigned(rangeCoder)) or (inBufferCount<=0) or (inLimit<=0) then begin
   result:=0;
@@ -2665,7 +2668,7 @@ begin
   subContext:=@rangeCoder^.symbols[predicted];
   while subcontext<>root do begin
    ENET_CONTEXT_ENCODE(rangeCoder,subcontext,symbol,value,under,count,ENET_SUBCONTEXT_SYMBOL_DELTA,0,nextSymbol);
-   parent^:=(TENetPtrInt(symbol)-TENetPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
+   parent^:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol)-TENetPtrUInt(@rangeCoder^.symbols[0]))) div sizeof(TENetSymbol);
    parent:=@symbol^.parent;
    total:=subcontext^.total;
    if count>0 then begin
@@ -2693,7 +2696,7 @@ begin
    subcontext:=@rangeCoder^.symbols[subcontext^.parent];
   end;
   ENET_CONTEXT_ENCODE(rangeCoder,subcontext,symbol,value,under,count,ENET_SUBCONTEXT_SYMBOL_DELTA,ENET_CONTEXT_SYMBOL_MINIMUM,nextSymbol);
-  parent^:=(TENetPtrInt(symbol)-TENetPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
+  parent^:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol)-TENetPtrUInt(@rangeCoder^.symbols[0]))) div sizeof(TENetSymbol);
   parent:=@symbol^.parent;
   total:=root^.total;
   if not ENET_RANGE_CODER_ENCODE(PENetUInt8(outData),outEnd,encodeLow,encodeRange,root^.escapes+under,count,total) then begin
@@ -2716,7 +2719,7 @@ nextInput:
   result:=0;
   exit;
  end;
- result:=TENetPtrInt(outData)-TENetPtrInt(outStart);
+ result:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(outData)-TENetPtrUInt(outStart)));
 end;
 
 procedure ENET_RANGE_CODER_SEED(var inData:PENetUInt8;inEnd:PENetUInt8;var decodeCode:TENetUInt32);
@@ -2818,7 +2821,7 @@ begin
   value_:=code div minimum;
   under_:=code-(code mod minimum);
   ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-  context^.symbols:=(TENetPtrInt(symbol_)-TENetPtrInt(context)) div sizeof(TENetSymbol);
+  context^.symbols:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol_)-TENetPtrUInt(context))) div sizeof(TENetSymbol);
  end else begin
   node:=@PENetSymbols(pointer(context))^[context^.symbols];
   while true do begin
@@ -2833,7 +2836,7 @@ begin
     value_:=(node^.value+1)+((code-after) div minimum);
     under_:=code-((code-after) mod minimum);
     ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-    node^.right:=(TENetPtrInt(symbol_)-TENetPtrInt(node)) div sizeof(TENetSymbol);
+    node^.right:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol_)-TENetPtrUInt(node))) div sizeof(TENetSymbol);
    end else if code<(after-before) then begin
     inc(node^.under,update);
     if node^.left<>0 then begin
@@ -2843,7 +2846,7 @@ begin
     value_:=(node^.value-1)-((((after-before)-code)-1) div minimum);
     under_:=code-((((after-before)-code)-1) mod minimum);
     ENET_SYMBOL_CREATE(rangeCoder,symbol_,value_,update,nextSymbol);
-    node^.left:=(TENetPtrInt(symbol_)-TENetPtrInt(node)) div sizeof(TENetSymbol);
+    node^.left:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol_)-TENetPtrUInt(node))) div sizeof(TENetSymbol);
    end else begin
     value_:=node^.value;
     inc(count_,node^.count);
@@ -2879,6 +2882,7 @@ begin
  predicted:=0;
  order:=0;
  nextSymbol:=0;
+ root:=nil;
  if (not assigned(rangeCoder)) or (inLimit<=0) then begin
   result:=0;
   exit;
@@ -2907,7 +2911,7 @@ begin
     result:=0;
     exit;
    end;
-   bottom:=(TENetPtrInt(symbol)-TENetPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
+   bottom:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol)-TENetPtrUInt(@rangeCoder^.symbols[0]))) div sizeof(TENetSymbol);
    ENET_RANGE_CODER_DECODE(PENetUInt8(inData),inEnd,decodeCode,decodeLow,decodeRange,subcontext^.escapes+under,count,total);
    inc(subcontext^.total,ENET_SUBCONTEXT_SYMBOL_DELTA);
    if (count>($ff-(2*ENET_SUBCONTEXT_SYMBOL_DELTA))) or (subcontext^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
@@ -2924,7 +2928,7 @@ begin
   end;
   dec(code,root^.escapes);
   ENET_CONTEXT_ROOT_DECODE(rangeCoder,root,symbol,code,value,under,count,ENET_CONTEXT_SYMBOL_DELTA,ENET_CONTEXT_SYMBOL_MINIMUM,nextSymbol);
-  bottom:=(TENetPtrInt(symbol)-TENetPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
+  bottom:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol)-TENetPtrUInt(@rangeCoder^.symbols[0]))) div sizeof(TENetSymbol);
   ENET_RANGE_CODER_DECODE(PENetUInt8(inData),inEnd,decodeCode,decodeLow,decodeRange,root^.escapes+under,count,total);
   inc(root^.total,ENET_CONTEXT_SYMBOL_DELTA);
   if (count>(($ff-(2*ENET_CONTEXT_SYMBOL_DELTA))+ENET_CONTEXT_SYMBOL_MINIMUM)) or (root^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
@@ -2934,7 +2938,7 @@ patchContexts:
   patch:=@rangeCoder^.symbols[predicted];
   while patch<>subcontext do begin
    ENET_CONTEXT_ENCODE(rangeCoder,patch,symbol,value,under,count,ENET_SUBCONTEXT_SYMBOL_DELTA,0,nextSymbol);
-   parent^:=(TENetPtrInt(symbol)-TENetPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
+   parent^:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(symbol)-TENetPtrUInt(@rangeCoder^.symbols[0]))) div sizeof(TENetSymbol);
    parent:=@symbol^.parent;
    if count<=0 then begin
     inc(patch^.escapes,ENET_SUBCONTEXT_ESCAPE_DELTA);
@@ -2955,7 +2959,7 @@ patchContexts:
   end;
   ENET_RANGE_CODER_FREE_SYMBOLS(rangeCoder,root,nextSymbol,predicted,order);
  end;
- result:=TENetPtrInt(outData)-TENetPtrInt(outStart);
+ result:={%H-}TENetPtrInt(TENetPtrUInt(TENetPtrUInt(outData)-TENetPtrUInt(outStart)));
 end;
 
 function enet_host_compress_with_range_coder(host:PENetHost):TENetInt32;
@@ -3107,7 +3111,7 @@ begin
 end;
 
 procedure enet_peer_throttle_configure(peer:PENetPeer;interval,acceleration,deceleration:TENetUInt32);
-var command:PENetProtocol;
+var command:TENetProtocol;
 begin
  peer^.packetThrottleInterval:=interval;
  peer^.packetThrottleAcceleration:=acceleration;
@@ -3882,7 +3886,7 @@ end;
 function enet_host_create(address:PENetAddress;peerCount,channelLimit,incomingBandwidth,outgoingBandwidth:TENetUInt32):PENetHost;
 var host:PENetHost;
     currentPeer:PENetPeer;
-    family,Value:TENetInt32;
+    family{,Value}:TENetInt32;
 begin
  if peerCount>ENET_PROTOCOL_MAXIMUM_PEER_ID then begin
   result:=nil;
@@ -5325,7 +5329,6 @@ end;
 function enet_protocol_receive_incoming_commands(host:PENetHost;event:PENetEvent;family:TENetAddressFamily;timeout:TENetUInt32):TENetInt32;
 var packets,receivedLength:TENetInt32;
     buffer:TENetBuffer;
-    peer:PENetPeer;
 begin
  packets:=0;
  repeat
