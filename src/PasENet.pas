@@ -447,6 +447,7 @@ const ENET_VERSION_MAJOR=1;
       ENET_SOCKOPT_SNDTIMEO=7;
       ENET_SOCKOPT_ERROR=8;
       ENET_SOCKOPT_NODELAY=9;
+      ENET_SOCKOPT_IPV6_V6ONLY=10;
 
       ENET_SOCKET_SHUTDOWN_READ=0;
       ENET_SOCKET_SHUTDOWN_WRITE=1;
@@ -1106,6 +1107,9 @@ function enet_host_service(host:PENetHost;event:PENetEvent;timeout:TENetUInt32):
 
 implementation
 
+const IPPROTO_IPV6=41;
+      IPV6_V6ONLY=26;
+
 function enet_list_begin(list:pointer):pointer;
 begin
  result:=PENetList(list)^.Sentinel.Next;
@@ -1610,6 +1614,9 @@ begin
   end;
   ENET_SOCKOPT_NODELAY:begin
    result:=fpsetsockopt(socket,IPPROTO_TCP,TCP_NODELAY,pointer(@value),SizeOf(TENetInt32));
+  end;
+  ENET_SOCKOPT_IPV6_V6ONLY:begin
+   result:=fpsetsockopt(socket,IPPROTO_IPV6,IPV6_V6ONLY,pointer(@value),SizeOf(TENetInt32));
   end;
  end;
  if result=SOCKET_ERROR then begin
@@ -2211,6 +2218,9 @@ begin
   ENET_SOCKOPT_NODELAY:begin
    result:=setsockopt(socket,IPPROTO_TCP,TCP_NODELAY,pointer(@value),SizeOf(TENetInt32));
   end;
+  ENET_SOCKOPT_IPV6_V6ONLY:begin
+   result:=setsockopt(socket,IPPROTO_IPV6,IPV6_V6ONLY,pointer(@value),SizeOf(TENetInt32));
+  end;
  end;
  if result=SOCKET_ERROR then begin
   result:=-1;
@@ -2674,7 +2684,7 @@ begin
     inc(subcontext^.total,ENET_SUBCONTEXT_ESCAPE_DELTA);
    end;
    inc(subcontext^.total,ENET_SUBCONTEXT_SYMBOL_DELTA);
-   if (count>($FF-(2*ENET_SUBCONTEXT_SYMBOL_DELTA))) or (subcontext^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
+   if (count>($ff-(2*ENET_SUBCONTEXT_SYMBOL_DELTA))) or (subcontext^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
     ENET_CONTEXT_RESCALE(subcontext,0);
    end;
    if count>0 then begin
@@ -2691,7 +2701,7 @@ begin
    exit;
   end;
   inc(root^.total,ENET_CONTEXT_SYMBOL_DELTA);
-  if (count>(($FF-(2*ENET_CONTEXT_SYMBOL_DELTA))+ENET_CONTEXT_SYMBOL_MINIMUM)) or (root^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
+  if (count>(($ff-(2*ENET_CONTEXT_SYMBOL_DELTA))+ENET_CONTEXT_SYMBOL_MINIMUM)) or (root^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
    ENET_CONTEXT_RESCALE(root,ENET_CONTEXT_SYMBOL_MINIMUM);
   end;
 nextInput:
@@ -2900,7 +2910,7 @@ begin
    bottom:=(TENetPtrInt(symbol)-TENetPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
    ENET_RANGE_CODER_DECODE(PENetUInt8(inData),inEnd,decodeCode,decodeLow,decodeRange,subcontext^.escapes+under,count,total);
    inc(subcontext^.total,ENET_SUBCONTEXT_SYMBOL_DELTA);
-   if (count>($FF-(2*ENET_SUBCONTEXT_SYMBOL_DELTA))) or (subcontext^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
+   if (count>($ff-(2*ENET_SUBCONTEXT_SYMBOL_DELTA))) or (subcontext^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
     ENET_CONTEXT_RESCALE(subcontext,0);
    end;
    goto patchContexts;
@@ -2917,7 +2927,7 @@ begin
   bottom:=(TENetPtrInt(symbol)-TENetPtrInt(@rangeCoder^.symbols[0])) div sizeof(TENetSymbol);
   ENET_RANGE_CODER_DECODE(PENetUInt8(inData),inEnd,decodeCode,decodeLow,decodeRange,root^.escapes+under,count,total);
   inc(root^.total,ENET_CONTEXT_SYMBOL_DELTA);
-  if (count>(($FF-(2*ENET_CONTEXT_SYMBOL_DELTA))+ENET_CONTEXT_SYMBOL_MINIMUM)) or (root^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
+  if (count>(($ff-(2*ENET_CONTEXT_SYMBOL_DELTA))+ENET_CONTEXT_SYMBOL_MINIMUM)) or (root^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
    ENET_CONTEXT_RESCALE(root,ENET_CONTEXT_SYMBOL_MINIMUM);
   end;
 patchContexts:
@@ -2931,7 +2941,7 @@ patchContexts:
     inc(patch^.total,ENET_SUBCONTEXT_ESCAPE_DELTA);
    end;
    inc(patch^.total,ENET_SUBCONTEXT_SYMBOL_DELTA);
-   if (count>($FF-(2*ENET_SUBCONTEXT_SYMBOL_DELTA))) or (patch^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
+   if (count>($ff-(2*ENET_SUBCONTEXT_SYMBOL_DELTA))) or (patch^.total>(ENET_RANGE_CODER_BOTTOM-$100)) then begin
     ENET_CONTEXT_RESCALE(patch,0);
    end;
    patch:=@rangeCoder^.symbols[patch^.parent];
@@ -3088,7 +3098,7 @@ begin
   data:=buffers^.data;
   dataEnd:=@data[buffers^.dataLength];
   while data<dataEnd do begin
-   crc:=(crc shr 8) xor crcTable[(crc and $FF) xor TENetUInt8(data^)];
+   crc:=(crc shr 8) xor crcTable[(crc and $ff) xor TENetUInt8(data^)];
    inc(data);
   end;
   inc(buffers);
@@ -3103,7 +3113,7 @@ begin
  peer^.packetThrottleAcceleration:=acceleration;
  peer^.packetThrottleDeceleration:=deceleration;
  command.header.command:=ENET_PROTOCOL_COMMAND_THROTTLE_CONFIGURE or ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
- command.header.channelID:=$FF;
+ command.header.channelID:=$ff;
  command.throttleConfigure.packetThrottleInterval:=ENET_HOST_TO_NET_32(interval);
  command.throttleConfigure.packetThrottleAcceleration:=ENET_HOST_TO_NET_32(acceleration);
  command.throttleConfigure.packetThrottleDeceleration:=ENET_HOST_TO_NET_32(deceleration);
@@ -3160,7 +3170,7 @@ begin
   end;
   if ((packet^.flags and (ENET_PACKET_FLAG_RELIABLE or ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT))=ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT) and (channel^.outgoingUnreliableSequenceNumber<$ffff) then begin
    commandNumber:=ENET_PROTOCOL_COMMAND_SEND_UNRELIABLE_FRAGMENT;
-   startSequenceNumber:=ENET_HOST_TO_NET_16 (channel^.outgoingUnreliableSequenceNumber+1);
+   startSequenceNumber:=ENET_HOST_TO_NET_16(channel^.outgoingUnreliableSequenceNumber+1);
   end else begin
    commandNumber:=ENET_PROTOCOL_COMMAND_SEND_FRAGMENT or ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
    startSequenceNumber:=ENET_HOST_TO_NET_16(channel^.outgoingReliableSequenceNumber+1);
@@ -3383,7 +3393,7 @@ var command:TENetProtocol;
 begin
  if peer^.state=ENET_PEER_STATE_CONNECTED then begin
   command.header.command:=ENET_PROTOCOL_COMMAND_PING or ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
-  command.header.channelID:=$FF;
+  command.header.channelID:=$ff;
   enet_peer_queue_outgoing_command(peer,@command,nil,0,0);
  end;
 end;
@@ -3425,7 +3435,7 @@ begin
  if (peer^.state<>ENET_PEER_STATE_ZOMBIE) and (peer^.state<>ENET_PEER_STATE_DISCONNECTING) then begin
   enet_peer_reset_queues(peer);
   command.header.command:=ENET_PROTOCOL_COMMAND_DISCONNECT or ENET_PROTOCOL_COMMAND_FLAG_UNSEQUENCED;
-  command.header.channelID:=$FF;
+  command.header.channelID:=$ff;
   command.disconnect.data:=ENET_HOST_TO_NET_32(data);
   enet_peer_queue_outgoing_command(peer,@command,nil,0,0);
   enet_host_flush(peer^.host);
@@ -3441,7 +3451,7 @@ begin
  end;
  enet_peer_reset_queues(peer);
  command.header.command:=ENET_PROTOCOL_COMMAND_DISCONNECT;
- command.header.channelID:=$FF;
+ command.header.channelID:=$ff;
  command.disconnect.data:=ENET_HOST_TO_NET_32(data);
  if peer^.state in [ENET_PEER_STATE_CONNECTED,ENET_PEER_STATE_DISCONNECT_LATER] then begin
   command.header.command:=command.header.command or ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
@@ -3504,7 +3514,7 @@ var channel:PENetChannel;
 begin
  channel:=@peer^.channels[outgoingCommand^.command.header.channelID];
  inc(peer^.outgoingDataTotal,enet_protocol_command_size(outgoingCommand^.command.header.command)+outgoingCommand^.fragmentLength);
- if outgoingCommand^.command.header.channelID=$FF then begin
+ if outgoingCommand^.command.header.channelID=$ff then begin
   inc(peer^.outgoingReliableSequenceNumber);
   outgoingCommand^.reliableSequenceNumber:=peer^.outgoingReliableSequenceNumber;
   outgoingCommand^.unreliableSequenceNumber:=0;
@@ -3853,18 +3863,20 @@ end;
 function enet_socket_create_bind(address:PENetAddress;family:TENetAddressFamily):TENetSocket;
 begin
  result:=enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM,family);
- if result=ENET_SOCKET_NULL then begin
-  exit;
+ if result<>ENET_SOCKET_NULL then begin
+  if family=ENET_IPV6 then begin
+   enet_socket_set_option(result,ENET_SOCKOPT_IPV6_V6ONLY,0);
+  end;
+  if enet_socket_bind(result,address,family)>=0 then begin
+   enet_socket_set_option(result,ENET_SOCKOPT_NONBLOCK,1);
+   enet_socket_set_option(result,ENET_SOCKOPT_BROADCAST,1);
+   enet_socket_set_option(result,ENET_SOCKOPT_RCVBUF,ENET_HOST_RECEIVE_BUFFER_SIZE);
+   enet_socket_set_option(result,ENET_SOCKOPT_SNDBUF,ENET_HOST_SEND_BUFFER_SIZE);
+  end else begin
+   enet_socket_destroy(result);
+   result:=ENET_SOCKET_NULL;
+  end;
  end;
- if enet_socket_bind(result,address,family)<0 then begin
-  enet_socket_destroy(result);
-  result:=ENET_SOCKET_NULL;
-  exit;
- end;
- enet_socket_set_option(result,ENET_SOCKOPT_NONBLOCK,1);
- enet_socket_set_option(result,ENET_SOCKOPT_BROADCAST,1);
- enet_socket_set_option(result,ENET_SOCKOPT_RCVBUF,ENET_HOST_RECEIVE_BUFFER_SIZE);
- enet_socket_set_option(result,ENET_SOCKOPT_SNDBUF,ENET_HOST_SEND_BUFFER_SIZE);
 end;
 
 function enet_host_create(address:PENetAddress;peerCount,channelLimit,incomingBandwidth,outgoingBandwidth:TENetUInt32):PENetHost;
@@ -4068,7 +4080,7 @@ begin
   inc(Channel);
  end;
  command.header.command:=ENET_PROTOCOL_COMMAND_CONNECT or ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
- command.header.channelID:=$FF;
+ command.header.channelID:=$ff;
  command.connect.outgoingPeerID:=ENET_HOST_TO_NET_16(currentPeer^.incomingPeerID);
  command.connect.incomingSessionID:=currentPeer^.incomingSessionID;
  command.connect.outgoingSessionID:=currentPeer^.outgoingSessionID;
@@ -4484,8 +4496,11 @@ var incomingSessionID,outgoingSessionID:TENetUInt8;
     Index:TENetInt32;
 begin
  result:=nil;
+
  channelCount:=ENET_NET_TO_HOST_32(command^.connect.channelCount);
+
  duplicatePeers:=0;
+ 
  if (channelCount<ENET_PROTOCOL_MINIMUM_CHANNEL_COUNT) or (channelCount>ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT) then begin
   result:=nil;
   exit;
@@ -4523,6 +4538,7 @@ begin
    inc(duplicatePeers);
   end;
  end;
+
  currentPeer:=@host^.peers^[host^.idlePeersList[host^.idlePeers-1]];
  result:=currentPeer;
 
@@ -5080,7 +5096,7 @@ begin
   result:=-1;
   exit;
  end;
- enet_protocol_remove_sent_reliable_command(peer,1,$FF);
+ enet_protocol_remove_sent_reliable_command(peer,1,$ff);
  if channelCount<peer^.channelCount then begin
   peer^.channelCount:=channelCount;
  end;
