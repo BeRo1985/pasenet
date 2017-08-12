@@ -547,7 +547,6 @@ type PENetVersion=^TENetVersion;
      PENetProtocolHeader=^TENetProtocolHeader;
      TENetProtocolHeader=packed record
       peerID:TENetUInt16;
-      flags:TENetUInt16;
       sentTime:TENetUInt16;
      end;
 
@@ -5131,13 +5130,17 @@ begin
  end;
  header:=PENetProtocolHeader(host^.receivedData);
  peerID:=ENET_NET_TO_HOST_16(header^.peerID);
- flags:=ENET_NET_TO_HOST_16(header^.flags);
- sessionID:=(flags and ENET_PROTOCOL_HEADER_SESSION_MASK) shr ENET_PROTOCOL_HEADER_SESSION_SHIFT;
- flags:=flags and ENET_PROTOCOL_HEADER_FLAG_MASK;
+ sessionID:=(peerID and ENET_PROTOCOL_HEADER_SESSION_MASK) shr ENET_PROTOCOL_HEADER_SESSION_SHIFT;
+ flags:=peerID and ENET_PROTOCOL_HEADER_FLAG_MASK;
+ peerID:=peerID and not (ENET_PROTOCOL_HEADER_FLAG_MASK or ENET_PROTOCOL_HEADER_FLAG_MASK);
  if (flags and ENET_PROTOCOL_HEADER_FLAG_SENT_TIME)<>0 then begin
   headerSize:=sizeof(TENetProtocolHeader);
  end else begin
   headerSize:={%H-}TENetPtrUInt(pointer(@PENetProtocolHeader(nil)^.sentTime));
+ end;                                              
+ if peerID=$fff then begin
+  peerID:=PENetUInt16(pointer(@pansichar(host^.receivedData)[headerSize]))^;
+  inc(headerSize,sizeof(TENetUInt16));
  end;
  if assigned(host^.checksum) then begin
   inc(headerSize,sizeof(TENetUInt32));
@@ -5611,7 +5614,7 @@ begin
 end;
 
 function enet_protocol_send_outgoing_commands(host:PENetHost;event:PENetEvent;checkForTimeouts:TENetInt32):TENetInt32;
-var headerData:array[0..(sizeof(TENetProtocolHeader)+sizeof(TENetUInt32))-1] of TENetUInt8;
+var headerData:array[0..(sizeof(TENetProtocolHeader)+sizeof(TENetUInt16)+sizeof(TENetUInt32))-1] of TENetUInt8;
     header:PENetProtocolHeader;
     currentPeer:PENetPeer;
     sentLength,Index:TENetInt32;
@@ -5731,8 +5734,13 @@ begin
    if currentPeer^.outgoingPeerID<ENET_PROTOCOL_MAXIMUM_PEER_ID then begin
     host^.headerFlags:=host^.headerFlags or (currentPeer^.outgoingSessionID shl ENET_PROTOCOL_HEADER_SESSION_SHIFT);
    end;
-   header^.peerID:=ENET_HOST_TO_NET_16(currentPeer^.outgoingPeerID);
-   header^.flags:=ENET_HOST_TO_NET_16(host^.headerFlags);
+   if currentPeer^.outgoingPeerID>=$fff then begin
+    header^.peerID:=ENET_HOST_TO_NET_16($fff or host^.headerFlags);
+    PENetUInt16(pointer(@headerData[host^.buffers[0].dataLength]))^:=currentPeer^.outgoingPeerID;
+    inc(host^.buffers[0].dataLength,sizeof(TENetUInt16));
+   end else begin
+    header^.peerID:=ENET_HOST_TO_NET_16(currentPeer^.outgoingPeerID or host^.headerFlags);
+   end;
    if assigned(host^.checksum) then begin
     checksum:=pointer(@headerData[host^.buffers[0].dataLength]);
     if currentPeer^.outgoingPeerID<ENET_PROTOCOL_MAXIMUM_PEER_ID then begin
