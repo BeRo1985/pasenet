@@ -5269,11 +5269,6 @@ var packets,receivedLength:TENetInt32;
 begin
  packets:=0;
  repeat
-  inc(Packets);
-  if ((Packets and 1023)=0) and (enet_time_get>=Timeout) then begin
-   result:=0;
-   exit;
-  end;
   buffer.data:=@host^.packetData[0];
   buffer.dataLength:=host^.mtu;
   if family=ENET_IPV4 then begin
@@ -5322,8 +5317,9 @@ begin
     exit;
    end;
   end;
- until false;
- result:=-1;
+  inc(Packets);
+ until ((Packets and 1023)=0) and (enet_time_get>=Timeout);
+ result:=0;
 end;
 
 procedure enet_protocol_send_acknowledgements(host:PENetHost;peer:PENetPeer);
