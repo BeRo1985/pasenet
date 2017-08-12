@@ -5137,7 +5137,7 @@ begin
   headerSize:=sizeof(TENetProtocolHeader);
  end else begin
   headerSize:={%H-}TENetPtrUInt(pointer(@PENetProtocolHeader(nil)^.sentTime));
- end;                                              
+ end;
  if peerID=$fff then begin
   peerID:=PENetUInt16(pointer(@pansichar(host^.receivedData)[headerSize]))^;
   inc(headerSize,sizeof(TENetUInt16));
