@@ -1344,7 +1344,9 @@ const timeBase:TENetUInt32=0;
 {$ifdef unix}
 const SOCKET_ERROR=-1;
 
+{$if defined(Linux) or defined(Android)}
       SOCK_CLOEXEC=$02000000;
+{$ifend}
 
 type PSockaddrStorage=^TSockaddrStorage;
      TSockaddrStorage=record
@@ -1573,9 +1575,9 @@ end;
 function enet_socket_create(type_:TENetSocketType;family:TENetAddressFamily):TENetSocket;
 begin
  if type_=ENET_SOCKET_TYPE_DATAGRAM then begin
-  result:=fpsocket(enet_af(family),SOCK_DGRAM or SOCK_CLOEXEC,0);
+  result:=fpsocket(enet_af(family),SOCK_DGRAM{$if defined(Linux) or defined(Android)}or SOCK_CLOEXEC{$ifend},0);
  end else begin
-  result:=fpsocket(enet_af(family),SOCK_STREAM or SOCK_CLOEXEC,0);
+  result:=fpsocket(enet_af(family),SOCK_STREAM{$if defined(Linux) or defined(Android)}or SOCK_CLOEXEC{$ifend},0);
  end;
 end;
 
