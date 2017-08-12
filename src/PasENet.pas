@@ -1,7 +1,10 @@
 (*
+** This pascal port of ENet is binary-protocol incompatible to the Original ENet,
+** because this pascal port of ENet offers also new protocol-based features,
+** which the Original ENet have not.
 **
 ** Copyright (c) 2002-2017 Lee Salzman
-** Copyright (c) 2013-2017 Benjamin 'BeRo' Rosseaux (Pascal port and IPv6)
+** Copyright (c) 2013-2017 Benjamin 'BeRo' Rosseaux (Pascal port, IPv6, higher maximum count of peers)
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a
 ** copy of this software and associated documentation files (the "Software"),
@@ -369,6 +372,9 @@ type PPENetInt8=^PENetInt8;
      PENetUInt16Array=^TENetUInt16Array;
      TENetUInt16Array=array[0..65535] of TENetUInt16;
 
+     PENetUInt32Array=^TENetUInt32Array;
+     TENetUInt32Array=array[0..65535] of TENetUInt32;
+
 const ENET_VERSION_MAJOR=1;
       ENET_VERSION_MINOR=3;
       ENET_VERSION_PATCH=13;
@@ -390,7 +396,7 @@ const ENET_VERSION_MAJOR=1;
       ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE=65536;
       ENET_PROTOCOL_MINIMUM_CHANNEL_COUNT=1;
       ENET_PROTOCOL_MAXIMUM_CHANNEL_COUNT=255;
-      ENET_PROTOCOL_MAXIMUM_PEER_ID=$fff;
+      ENET_PROTOCOL_MAXIMUM_PEER_ID=$ffff;
       ENET_PROTOCOL_MAXIMUM_PACKET_SIZE=1024*1024*1024;
       ENET_PROTOCOL_MAXIMUM_FRAGMENT_COUNT=1024*1024;
 
@@ -541,6 +547,7 @@ type PENetVersion=^TENetVersion;
      PENetProtocolHeader=^TENetProtocolHeader;
      TENetProtocolHeader=packed record
       peerID:TENetUInt16;
+      flags:TENetUInt16;
       sentTime:TENetUInt16;
      end;
 
@@ -978,8 +985,10 @@ function ENET_TIME_DIFFERENCE(a,b:TENetUInt32):TENetInt32;
 
 function ENET_HOST_TO_NET_16(value:TENetUInt16):TENetUInt16;
 function ENET_HOST_TO_NET_32(value:TENetUInt32):TENetUInt32;
+function ENET_HOST_TO_NET_64(value:TENetUInt64):TENetUInt64;
 function ENET_NET_TO_HOST_16(value:TENetUInt16):TENetUInt16;
 function ENET_NET_TO_HOST_32(value:TENetUInt32):TENetUInt32;
+function ENET_NET_TO_HOST_64(value:TENetUInt64):TENetUInt64;
 
 procedure ENET_SOCKETSET_EMPTY(var sockset:TFDSet);
 procedure ENET_SOCKETSET_ADD(var sockset:TFDSet;socket:TSocket);
@@ -1221,6 +1230,22 @@ begin
  result:=htonl(value);
 end;
 
+function ENET_HOST_TO_NET_64(value:TENetUInt64):TENetUInt64;
+begin
+{$ifdef BIG_ENDIAN}
+ result:=value;
+{$else}
+ result:=(((value shr 56) and $ff) shl 0) or
+         (((value shr 48) and $ff) shl 8) or
+         (((value shr 40) and $ff) shl 16) or
+         (((value shr 32) and $ff) shl 24) or
+         (((value shr 24) and $ff) shl 32) or
+         (((value shr 16) and $ff) shl 40) or
+         (((value shr 8) and $ff) shl 48) or
+         (((value shr 0) and $ff) shl 56);
+{$endif}
+end;
+
 function ENET_NET_TO_HOST_16(value:TENetUInt16):TENetUInt16;
 begin
  result:=ntohs(value);
@@ -1229,6 +1254,22 @@ end;
 function ENET_NET_TO_HOST_32(value:TENetUInt32):TENetUInt32;
 begin
  result:=ntohl(value);
+end;
+
+function ENET_NET_TO_HOST_64(value:TENetUInt64):TENetUInt64;
+begin
+{$ifdef BIG_ENDIAN}
+ result:=value;
+{$else}
+ result:=(((value shr 56) and $ff) shl 0) or
+         (((value shr 48) and $ff) shl 8) or
+         (((value shr 40) and $ff) shl 16) or
+         (((value shr 32) and $ff) shl 24) or
+         (((value shr 24) and $ff) shl 32) or
+         (((value shr 16) and $ff) shl 40) or
+         (((value shr 8) and $ff) shl 48) or
+         (((value shr 0) and $ff) shl 56);
+{$endif}
 end;
 
 procedure ENET_SOCKETSET_EMPTY(var sockset:TFDSet);
@@ -3039,7 +3080,7 @@ function enet_crc32(buffers:PENetBuffer;bufferCount:TENetInt32):TENetUInt32;
 var crc:TENetUInt32;
     data,dataEnd:pansichar;
 begin
- crc:=$FFFFFFFF;
+ crc:=$ffffffff;
  if not initializedCRC32 then begin
   initialize_crc32;
  end;
@@ -3118,7 +3159,7 @@ begin
    result:=-1;
    exit;
   end;
-  if ((packet^.flags and (ENET_PACKET_FLAG_RELIABLE or ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT))=ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT) and (channel^.outgoingUnreliableSequenceNumber<$FFFF) then begin
+  if ((packet^.flags and (ENET_PACKET_FLAG_RELIABLE or ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT))=ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT) and (channel^.outgoingUnreliableSequenceNumber<$ffff) then begin
    commandNumber:=ENET_PROTOCOL_COMMAND_SEND_UNRELIABLE_FRAGMENT;
    startSequenceNumber:=ENET_HOST_TO_NET_16 (channel^.outgoingUnreliableSequenceNumber+1);
   end else begin
@@ -3170,9 +3211,9 @@ begin
  if (packet^.flags and (ENET_PACKET_FLAG_RELIABLE or ENET_PACKET_FLAG_UNSEQUENCED))=ENET_PACKET_FLAG_UNSEQUENCED then begin
   command.header.command:=ENET_PROTOCOL_COMMAND_SEND_UNSEQUENCED or ENET_PROTOCOL_COMMAND_FLAG_UNSEQUENCED;
   command.sendUnsequenced.dataLength:=ENET_HOST_TO_NET_16(packet^.dataLength);
- end else if ((packet^.flags and ENET_PACKET_FLAG_RELIABLE)<>0) or (channel^.outgoingUnreliableSequenceNumber>=$FFFF) then begin
+ end else if ((packet^.flags and ENET_PACKET_FLAG_RELIABLE)<>0) or (channel^.outgoingUnreliableSequenceNumber>=$ffff) then begin
   command.header.command:=ENET_PROTOCOL_COMMAND_SEND_RELIABLE or ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
-  command.sendReliable.dataLength:=ENET_HOST_TO_NET_16 (packet^.dataLength);
+  command.sendReliable.dataLength:=ENET_HOST_TO_NET_16(packet^.dataLength);
  end else begin
   command.header.command:=ENET_PROTOCOL_COMMAND_SEND_UNRELIABLE;
   command.sendUnreliable.dataLength:=ENET_HOST_TO_NET_16(packet^.dataLength);
@@ -3734,7 +3775,7 @@ begin
  end;
 
  incomingCommand^.reliableSequenceNumber:=command^.header.reliableSequenceNumber;
- incomingCommand^.unreliableSequenceNumber:=unreliableSequenceNumber and $FFFF;
+ incomingCommand^.unreliableSequenceNumber:=unreliableSequenceNumber and $ffff;
  incomingCommand^.command:=command^;
  incomingCommand^.fragmentCount:=fragmentCount;
  incomingCommand^.fragmentsRemaining:=fragmentCount;
@@ -4654,7 +4695,7 @@ begin
   result:=0;
   exit;
  end;
- unsequencedGroup:=unsequencedGroup and $FFFF;
+ unsequencedGroup:=unsequencedGroup and $ffff;
  if (unsequencedGroup-index)<>peer^.incomingUnsequencedGroup then begin
   peer^.incomingUnsequencedGroup:=unsequencedGroup-index;
   FillChar(peer^.unsequencedWindow,sizeof(peer^.unsequencedWindow),AnsiChar(#0));
@@ -4961,7 +5002,7 @@ begin
   exit;
  end;
  receivedSentTime:=ENET_NET_TO_HOST_16(command^.acknowledge.receivedSentTime);
- receivedSentTime:=receivedSentTime or (host^.serviceTime and $FFFF0000);
+ receivedSentTime:=receivedSentTime or (host^.serviceTime and $ffff0000);
  if (receivedSentTime and $8000)>(host^.serviceTime and $8000) then begin
   dec(receivedSentTime,$10000);
  end;
@@ -5090,9 +5131,9 @@ begin
  end;
  header:=PENetProtocolHeader(host^.receivedData);
  peerID:=ENET_NET_TO_HOST_16(header^.peerID);
- sessionID:=(peerID and ENET_PROTOCOL_HEADER_SESSION_MASK) shr ENET_PROTOCOL_HEADER_SESSION_SHIFT;
- flags:=peerID and ENET_PROTOCOL_HEADER_FLAG_MASK;
- peerID:=peerID and not (ENET_PROTOCOL_HEADER_FLAG_MASK or ENET_PROTOCOL_HEADER_SESSION_MASK);
+ flags:=ENET_NET_TO_HOST_16(header^.flags);
+ sessionID:=(flags and ENET_PROTOCOL_HEADER_SESSION_MASK) shr ENET_PROTOCOL_HEADER_SESSION_SHIFT;
+ flags:=flags and ENET_PROTOCOL_HEADER_FLAG_MASK;
  if (flags and ENET_PROTOCOL_HEADER_FLAG_SENT_TIME)<>0 then begin
   headerSize:=sizeof(TENetProtocolHeader);
  end else begin
@@ -5670,7 +5711,7 @@ begin
    end;
    host^.buffers[0].data:=@headerData;
    if (host^.headerFlags and ENET_PROTOCOL_HEADER_FLAG_SENT_TIME)<>0 then begin
-    header^.sentTime:=ENET_HOST_TO_NET_16(host^.serviceTime and $FFFF);
+    header^.sentTime:=ENET_HOST_TO_NET_16(host^.serviceTime and $ffff);
     host^.buffers[0].dataLength:=sizeof(TENetProtocolHeader);
    end else begin
     host^.buffers[0].dataLength:={%H-}TENetPtrUInt(Pointer(@PENetProtocolHeader(nil)^.sentTime));
@@ -5690,7 +5731,8 @@ begin
    if currentPeer^.outgoingPeerID<ENET_PROTOCOL_MAXIMUM_PEER_ID then begin
     host^.headerFlags:=host^.headerFlags or (currentPeer^.outgoingSessionID shl ENET_PROTOCOL_HEADER_SESSION_SHIFT);
    end;
-   header^.peerID:=ENET_HOST_TO_NET_16(currentPeer^.outgoingPeerID or host^.headerFlags);
+   header^.peerID:=ENET_HOST_TO_NET_16(currentPeer^.outgoingPeerID);
+   header^.flags:=ENET_HOST_TO_NET_16(host^.headerFlags);
    if assigned(host^.checksum) then begin
     checksum:=pointer(@headerData[host^.buffers[0].dataLength]);
     if currentPeer^.outgoingPeerID<ENET_PROTOCOL_MAXIMUM_PEER_ID then begin
